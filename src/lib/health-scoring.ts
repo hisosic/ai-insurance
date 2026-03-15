@@ -1,0 +1,181 @@
+/**
+ * 코드 기반 결정적 건강 점수 산정 모듈
+ * AI의 주관적 판단 대신 규칙 기반으로 점수를 산정하여 일관성을 보장합니다.
+ */
+
+export interface ExtractedMetrics {
+  // 혈압
+  systolic?: number; // 수축기
+  diastolic?: number; // 이완기
+  // 혈당/대사
+  fastingGlucose?: number; // 공복혈당
+  hba1c?: number;
+  totalCholesterol?: number;
+  ldl?: number;
+  hdl?: number;
+  triglyceride?: number;
+  // 간기능
+  ast?: number;
+  alt?: number;
+  ggt?: number;
+  // 신장기능
+  creatinine?: number;
+  egfr?: number;
+  bun?: number;
+  // 체성분
+  bmi?: number;
+  // 혈액
+  hemoglobin?: number;
+  wbc?: number;
+  platelet?: number;
+  // 기타
+  uricAcid?: number;
+}
+
+type Grade = "normal" | "borderline" | "abnormal";
+
+interface GradeResult {
+  grade: Grade;
+  value: number;
+  label: string;
+  ref: string;
+}
+
+function gradeMetric(
+  value: number | undefined,
+  label: string,
+  normalRange: [number, number],
+  borderlineRange: [number, number],
+  ref: string,
+  invertDirection?: boolean
+): GradeResult | null {
+  if (value === undefined || value === null) return null;
+  let grade: Grade;
+  if (invertDirection) {
+    // 낮을수록 위험 (HDL, eGFR 등)
+    if (value >= normalRange[0]) grade = "normal";
+    else if (value >= borderlineRange[0]) grade = "borderline";
+    else grade = "abnormal";
+  } else {
+    // 높을수록 위험
+    if (value <= normalRange[1]) grade = "normal";
+    else if (value <= borderlineRange[1]) grade = "borderline";
+    else grade = "abnormal";
+  }
+  return { grade, value, label, ref };
+}
+
+export function gradeAllMetrics(
+  m: ExtractedMetrics,
+  gender: string
+): Record<string, GradeResult[]> {
+  const isMale = gender === "남성";
+
+  // 보수적 기준: 정상 범위를 좁히고, 경계→이상 기준도 더 엄격하게 설정
+  const cardiovascular: (GradeResult | null)[] = [
+    gradeMetric(m.systolic, "수축기혈압", [0, 114], [0, 129], "정상 <115, 경계 115~129, 고혈압전단계/고혈압 >=130"),
+    gradeMetric(m.diastolic, "이완기혈압", [0, 74], [0, 84], "정상 <75, 경계 75~84, 고혈압전단계/고혈압 >=85"),
+    gradeMetric(m.totalCholesterol, "총콜레스테롤", [0, 189], [0, 219], "정상 <190, 경계 190~219, 높음 >=220 mg/dL"),
+    gradeMetric(m.ldl, "LDL", [0, 119], [0, 139], "정상 <120, 경계 120~139, 높음 >=140 mg/dL"),
+    gradeMetric(
+      m.hdl,
+      "HDL",
+      [isMale ? 45 : 55, 999],
+      [isMale ? 40 : 45, 999],
+      isMale ? "남성 정상 >=45 mg/dL" : "여성 정상 >=55 mg/dL",
+      true
+    ),
+    gradeMetric(m.triglyceride, "중성지방", [0, 129], [0, 169], "정상 <130, 경계 130~169, 높음 >=170 mg/dL"),
+  ];
+
+  const liver: (GradeResult | null)[] = [
+    gradeMetric(m.ast, "AST(GOT)", [0, 33], [0, 50], "정상 0~33 U/L"),
+    gradeMetric(m.alt, "ALT(GPT)", [0, 30], [0, 50], "정상 0~30 U/L"),
+    gradeMetric(
+      m.ggt,
+      "GGT",
+      [0, isMale ? 50 : 30],
+      [0, isMale ? 80 : 50],
+      isMale ? "남성 정상 <=50 U/L" : "여성 정상 <=30 U/L"
+    ),
+  ];
+
+  const kidney: (GradeResult | null)[] = [
+    gradeMetric(
+      m.creatinine,
+      "크레아티닌",
+      [0, isMale ? 1.2 : 1.0],
+      [0, isMale ? 1.5 : 1.2],
+      isMale ? "남성 정상 0.7~1.2 mg/dL" : "여성 정상 0.6~1.0 mg/dL"
+    ),
+    gradeMetric(m.egfr, "eGFR", [90, 999], [60, 999], "정상 >=90, 경도저하 60~89, 중등도저하 <60 mL/min", true),
+    gradeMetric(m.bun, "BUN", [0, 19], [0, 23], "정상 7~19 mg/dL"),
+  ];
+
+  const metabolic: (GradeResult | null)[] = [
+    gradeMetric(m.fastingGlucose, "공복혈당", [0, 94], [0, 109], "정상 <95, 경계 95~109, 당뇨전단계/당뇨 >=110 mg/dL"),
+    gradeMetric(m.hba1c, "HbA1c", [0, 5.4], [0, 5.9], "정상 <5.5, 경계 5.5~5.9, 당뇨전단계/당뇨 >=6.0%"),
+    gradeMetric(m.uricAcid, "요산", [0, isMale ? 6.5 : 5.5], [0, isMale ? 7.5 : 6.5], isMale ? "남성 정상 3.4~6.5 mg/dL" : "여성 정상 2.4~5.5 mg/dL"),
+  ];
+
+  const body: (GradeResult | null)[] = [
+    gradeMetric(m.bmi, "BMI", [0, 22.4], [0, 24.4], "정상 18.5~22.4, 과체중 22.5~24.4, 비만 >=24.5"),
+  ];
+
+  const filterNull = (arr: (GradeResult | null)[]): GradeResult[] =>
+    arr.filter((v): v is GradeResult => v !== null);
+
+  return {
+    심혈관계: filterNull(cardiovascular),
+    간기능: filterNull(liver),
+    신장기능: filterNull(kidney),
+    "대사기능(혈당/지질)": filterNull(metabolic),
+    "체성분(BMI)": filterNull(body),
+  };
+}
+
+export function computeRiskScore(grades: GradeResult[]): number {
+  if (grades.length === 0) return 2;
+
+  const abnormalCount = grades.filter((g) => g.grade === "abnormal").length;
+  const borderlineCount = grades.filter((g) => g.grade === "borderline").length;
+  const total = grades.length;
+  const abnormalRatio = abnormalCount / total;
+
+  // 보수적 산정: 경계도 위험 신호로 간주, 이상은 더 높은 점수 부여
+  if (abnormalCount === 0 && borderlineCount === 0) return 2;
+  if (abnormalCount === 0 && borderlineCount === 1) return 4;
+  if (abnormalCount === 0 && borderlineCount >= 2) return 5;
+  if (abnormalCount === 1 && borderlineCount === 0) return 6;
+  if (abnormalCount === 1 && borderlineCount >= 1) return 7;
+  if (abnormalCount >= 2 && abnormalRatio < 0.5) return 8;
+  if (abnormalCount >= 2 && abnormalRatio < 0.7) return 9;
+  return 10;
+}
+
+export function computeStatus(score: number): string {
+  if (score <= 2) return "정상";
+  if (score <= 4) return "경계";
+  if (score <= 6) return "주의";
+  return "위험";
+}
+
+export function computeOverallRiskLevel(scores: number[]): string {
+  if (scores.length === 0) return "low";
+  const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+  const max = Math.max(...scores);
+
+  // 보수적: 하나라도 높으면 전체 등급 상향
+  if (max >= 9) return "critical";
+  if (max >= 7 || avg > 5) return "high";
+  if (max >= 5 || avg > 3) return "moderate";
+  return "low";
+}
+
+export function buildFindings(grades: GradeResult[]): string[] {
+  return grades.map((g) => {
+    const statusLabel =
+      g.grade === "normal" ? "정상" : g.grade === "borderline" ? "경계" : "이상";
+    return `${g.label} ${g.value} (${g.ref}) → ${statusLabel}`;
+  });
+}

@@ -1,0 +1,28 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getAnalysisList, deleteAnalysis } from "@/lib/db";
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const page = parseInt(searchParams.get("page") || "1");
+  const limit = parseInt(searchParams.get("limit") || "20");
+  const search = searchParams.get("search") || undefined;
+
+  const data = getAnalysisList(page, limit, search);
+  return NextResponse.json(data);
+}
+
+export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = parseInt(searchParams.get("id") || "0");
+
+  if (!id) {
+    return NextResponse.json({ error: "ID가 필요합니다" }, { status: 400 });
+  }
+
+  const success = deleteAnalysis(id);
+  if (!success) {
+    return NextResponse.json({ error: "결과를 찾을 수 없습니다" }, { status: 404 });
+  }
+
+  return NextResponse.json({ success: true });
+}
