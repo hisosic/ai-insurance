@@ -1,9 +1,14 @@
 import Database from "better-sqlite3";
 import path from "path";
+import crypto from "crypto";
 
 const DB_PATH = path.join(process.cwd(), "data", "danbee.db");
 
 let db: Database.Database | null = null;
+
+function generateToken(): string {
+  return crypto.randomBytes(16).toString("base64url");
+}
 
 function getDb(): Database.Database {
   if (!db) {
@@ -22,6 +27,7 @@ function getDb(): Database.Database {
     db.exec(`
       CREATE TABLE IF NOT EXISTS analysis_results (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        share_token TEXT UNIQUE,
         name TEXT NOT NULL,
         age INTEGER NOT NULL,
         gender TEXT NOT NULL,
@@ -32,12 +38,25 @@ function getDb(): Database.Database {
         created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
       )
     `);
+
+    // Migrate: add share_token column if missing
+    const columns = db.prepare("PRAGMA table_info(analysis_results)").all() as { name: string }[];
+    if (!columns.some((c) => c.name === "share_token")) {
+      db.exec("ALTER TABLE analysis_results ADD COLUMN share_token TEXT UNIQUE");
+      // Backfill existing rows
+      const rows = db.prepare("SELECT id FROM analysis_results WHERE share_token IS NULL").all() as { id: number }[];
+      const update = db.prepare("UPDATE analysis_results SET share_token = ? WHERE id = ?");
+      for (const row of rows) {
+        update.run(generateToken(), row.id);
+      }
+    }
   }
   return db;
 }
 
 export interface AnalysisRecord {
   id: number;
+  share_token: string;
   name: string;
   age: number;
   gender: string;
@@ -51,13 +70,15 @@ export interface AnalysisRecord {
 export function saveAnalysis(
   userInfo: { name: string; age: string; gender: string; phone: string },
   analysis: Record<string, unknown>
-): number {
+): { id: number; shareToken: string } {
   const db = getDb();
+  const token = generateToken();
   const stmt = db.prepare(`
-    INSERT INTO analysis_results (name, age, gender, phone, overall_risk_level, summary, analysis_json)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO analysis_results (share_token, name, age, gender, phone, overall_risk_level, summary, analysis_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const result = stmt.run(
+    token,
     userInfo.name,
     parseInt(userInfo.age),
     userInfo.gender,
@@ -66,7 +87,7 @@ export function saveAnalysis(
     (analysis.summary as string) || "",
     JSON.stringify(analysis)
   );
-  return result.lastInsertRowid as number;
+  return { id: result.lastInsertRowid as number, shareToken: token };
 }
 
 export function getAnalysisList(
@@ -102,6 +123,12 @@ export function getAnalysisById(id: number): AnalysisRecord | undefined {
   const db = getDb();
   const stmt = db.prepare("SELECT * FROM analysis_results WHERE id = ?");
   return stmt.get(id) as AnalysisRecord | undefined;
+}
+
+export function getAnalysisByToken(token: string): AnalysisRecord | undefined {
+  const db = getDb();
+  const stmt = db.prepare("SELECT * FROM analysis_results WHERE share_token = ?");
+  return stmt.get(token) as AnalysisRecord | undefined;
 }
 
 export function deleteAnalysis(id: number): boolean {

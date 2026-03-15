@@ -80,8 +80,8 @@ export default function ResultPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!params.id) return;
-    fetch(`/api/results/${params.id}`)
+    if (!params.token) return;
+    fetch(`/api/results/${params.token}`)
       .then((res) => {
         if (!res.ok) throw new Error("결과를 찾을 수 없습니다");
         return res.json();
@@ -92,7 +92,7 @@ export default function ResultPage() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [params.id]);
+  }, [params.token]);
 
   const getRiskColor = (score: number) => {
     if (score <= 3) return "text-green-600 bg-green-50 border-green-200";

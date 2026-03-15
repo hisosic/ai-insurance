@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAnalysisById } from "@/lib/db";
+import { getAnalysisByToken } from "@/lib/db";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ token: string }> }
 ) {
-  const { id } = await params;
-  const record = getAnalysisById(parseInt(id));
+  const { token } = await params;
+  const record = getAnalysisByToken(token);
 
   if (!record) {
     return NextResponse.json({ error: "결과를 찾을 수 없습니다" }, { status: 404 });

@@ -254,13 +254,14 @@ ${productSummary}
     };
 
     // Save to DB
-    const recordId = saveAnalysis({ name, age, gender, phone }, analysis);
+    const { id: recordId, shareToken } = saveAnalysis({ name, age, gender, phone }, analysis);
 
     return NextResponse.json({
       success: true,
       analysis,
       userInfo: { name, age, gender, phone },
       recordId,
+      shareToken,
     });
   } catch (error) {
     console.error("Analysis error:", error);

@@ -84,6 +84,7 @@ export default function Home() {
   const [showPrivacyDetail, setShowPrivacyDetail] = useState(false);
   const [showSensitiveDetail, setShowSensitiveDetail] = useState(false);
   const [recordId, setRecordId] = useState<number | null>(null);
+  const [shareToken, setShareToken] = useState<string | null>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -146,6 +147,7 @@ export default function Home() {
       if (!res.ok) throw new Error(data.error);
       setResult(data.analysis);
       setRecordId(data.recordId || null);
+      setShareToken(data.shareToken || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "분석 중 오류가 발생했습니다.");
     } finally {
@@ -197,8 +199,8 @@ export default function Home() {
   const [showShareMenu, setShowShareMenu] = useState(false);
 
   const getShareUrl = () => {
-    if (!recordId || typeof window === "undefined") return window?.location?.origin || "";
-    return `${window.location.origin}/results/${recordId}`;
+    if (!shareToken || typeof window === "undefined") return window?.location?.origin || "";
+    return `${window.location.origin}/results/${shareToken}`;
   };
 
   const buildShareText = () => {
