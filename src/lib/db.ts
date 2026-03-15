@@ -42,13 +42,15 @@ function getDb(): Database.Database {
     // Migrate: add share_token column if missing
     const columns = db.prepare("PRAGMA table_info(analysis_results)").all() as { name: string }[];
     if (!columns.some((c) => c.name === "share_token")) {
-      db.exec("ALTER TABLE analysis_results ADD COLUMN share_token TEXT UNIQUE");
+      db.exec("ALTER TABLE analysis_results ADD COLUMN share_token TEXT");
       // Backfill existing rows
       const rows = db.prepare("SELECT id FROM analysis_results WHERE share_token IS NULL").all() as { id: number }[];
       const update = db.prepare("UPDATE analysis_results SET share_token = ? WHERE id = ?");
       for (const row of rows) {
         update.run(generateToken(), row.id);
       }
+      // Add unique index after backfill
+      db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_share_token ON analysis_results(share_token)");
     }
   }
   return db;
