@@ -313,7 +313,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">건강검진 AI 분석</h1>
-              <p className="text-xs text-gray-500">한화 보험 맞춤 추천 서비스</p>
+              <p className="text-xs text-gray-500">AI 건강분석 및 보험 정보 서비스</p>
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -871,7 +871,7 @@ export default function Home() {
                 맞춤 보험상품 추천
               </h3>
               <p className="text-sm text-gray-600 mb-2">
-                건강검진 분석 결과를 바탕으로 참고할 수 있는 한화 보험상품 정보를 안내드립니다.
+                건강검진 분석 결과를 바탕으로 참고할 수 있는 보험상품 정보를 안내드립니다.
               </p>
               <p className="text-xs text-orange-600/70 mb-6">
                 ※ 본 안내는 보험 모집 또는 계약 권유가 아닌 참고용 정보이며, 실제 가입 조건은 보험사에 문의하시기 바랍니다.
@@ -1064,7 +1064,7 @@ export default function Home() {
                   본 서비스에서 제공하는 보험상품 정보는 AI가 건강검진 결과를 바탕으로 생성한 <span className="font-medium text-gray-700">참고용 정보</span>이며,
                   「보험업법」 제83조에 따른 보험 모집, 보험계약 체결의 권유 또는 중개 행위에 해당하지 않습니다.
                   표시된 보험료 및 보장 내용은 실제와 다를 수 있으며, 정확한 보험료, 보장 범위, 가입 조건, 보험금 지급 사유 등은
-                  반드시 해당 보험사(한화생명, 한화손해보험)에 직접 문의하여 확인하시기 바랍니다.
+                  반드시 해당 보험사에 직접 문의하여 확인하시기 바랍니다.
                   본 서비스 제공자는 보험상품 추천 정보에 의존하여 발생한 재산상의 손해에 대해 법적 책임을 부담하지 않습니다.
                 </p>
               </div>
@@ -1089,7 +1089,8 @@ export default function Home() {
           <p className="text-sm text-gray-500">본 서비스는 AI 기반 건강검진 참고 분석 서비스입니다.</p>
           <p>본 서비스는 의료기관이 아니며, 제공되는 정보는 의학적 진단·치료를 대체하지 않습니다.</p>
           <p>보험상품 안내는 참고 정보이며, 「보험업법」상 보험 모집 행위에 해당하지 않습니다.</p>
-          <p className="pt-2 text-gray-500">한화생명 | 한화손해보험</p>
+          <p className="font-medium text-gray-500 pt-2">본 서비스는 특정 보험사의 공식 서비스가 아니며, 어떠한 보험사와도 제휴·협약 관계에 있지 않습니다.</p>
+          <p>언급된 보험상품 정보는 공개된 자료를 바탕으로 한 참고용이며, 실제 상품과 다를 수 있습니다.</p>
         </div>
       </footer>
     </div>

@@ -177,7 +177,7 @@ export default function ResultPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">건강검진 AI 분석</h1>
-              <p className="text-xs text-gray-500">한화 보험 맞춤 추천 서비스</p>
+              <p className="text-xs text-gray-500">AI 건강분석 및 보험 정보 서비스</p>
             </div>
           </Link>
           <Link
@@ -328,7 +328,7 @@ export default function ResultPage() {
             맞춤 보험상품 추천
           </h3>
           <p className="text-sm text-gray-600 mb-2">
-            건강검진 분석 결과를 바탕으로 참고할 수 있는 한화 보험상품 정보를 안내드립니다.
+            건강검진 분석 결과를 바탕으로 참고할 수 있는 보험상품 정보를 안내드립니다.
           </p>
           <p className="text-xs text-orange-600/70 mb-6">
             ※ 본 안내는 보험 모집 또는 계약 권유가 아닌 참고용 정보이며, 실제 가입 조건은 보험사에 문의하시기 바랍니다.
@@ -429,7 +429,7 @@ export default function ResultPage() {
         <div className="max-w-6xl mx-auto px-4 py-6 text-center text-xs text-gray-400 space-y-1">
           <p className="text-sm text-gray-500">본 서비스는 AI 기반 건강검진 참고 분석 서비스입니다.</p>
           <p>본 서비스는 의료기관이 아니며, 제공되는 정보는 의학적 진단·치료를 대체하지 않습니다.</p>
-          <p className="pt-2 text-gray-500">한화생명 | 한화손해보험</p>
+          <p className="font-medium text-gray-500 pt-2">본 서비스는 특정 보험사의 공식 서비스가 아닙니다.</p>
         </div>
       </footer>
     </div>
