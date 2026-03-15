@@ -1,0 +1,18 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: danbee-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin1234}
+    volumes:
+      - danbee-data:/app/data
+
+volumes:
+  danbee-data:
+    driver: local

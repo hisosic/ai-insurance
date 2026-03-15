@@ -17,6 +17,11 @@ import {
   ChevronRight,
   Star,
   X,
+  MessageCircle,
+  Share2,
+  Users,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 
 interface AnalysisCategory {
@@ -78,6 +83,7 @@ export default function Home() {
   const [agreedDisclaimer, setAgreedDisclaimer] = useState(false);
   const [showPrivacyDetail, setShowPrivacyDetail] = useState(false);
   const [showSensitiveDetail, setShowSensitiveDetail] = useState(false);
+  const [recordId, setRecordId] = useState<number | null>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -139,6 +145,7 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setResult(data.analysis);
+      setRecordId(data.recordId || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "분석 중 오류가 발생했습니다.");
     } finally {
@@ -184,6 +191,115 @@ export default function Home() {
       default:
         return "bg-green-100 text-green-700 border-green-200";
     }
+  };
+
+  const [copied, setCopied] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+
+  const getShareUrl = () => {
+    if (!recordId || typeof window === "undefined") return window?.location?.origin || "";
+    return `${window.location.origin}/results/${recordId}`;
+  };
+
+  const buildShareText = () => {
+    if (!result) return "";
+    const riskLabel = getOverallRiskStyle(result.overallRiskLevel).label;
+    const categories = result.categories
+      .map((c) => `  - ${c.name}: ${c.riskScore}/10 (${c.status})`)
+      .join("\n");
+    const risks = result.topRisks
+      .slice(0, 3)
+      .map((r) => `  - ${r.condition} (${r.probability})`)
+      .join("\n");
+    const shareUrl = getShareUrl();
+    return `[AI 건강검진 분석 결과]\n\n종합 위험도: ${riskLabel}\n${result.summary}\n\n[부위별 분석]\n${categories}\n\n[주요 위험]\n${risks}\n\n※ AI 참고용 분석이며, 정확한 진단은 의료기관 상담이 필요합니다.\n\n결과 보기: ${shareUrl}`;
+  };
+
+  const copyToClipboard = (text: string) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCopyResult = () => {
+    copyToClipboard(buildShareText());
+  };
+
+  const handleShareKakao = () => {
+    const shareUrl = getShareUrl();
+    const riskLabel = result ? getOverallRiskStyle(result.overallRiskLevel).label : "";
+    const text = `[AI 건강검진 분석 결과] 종합 위험도: ${riskLabel}\n${result?.summary || ""}\n\n결과 보기: ${shareUrl}`;
+
+    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      // 모바일: intent로 카카오톡 공유 (대화상대 선택 화면 표시)
+      const intentUrl =
+        `intent://send?text=${encodeURIComponent(text)}#Intent;` +
+        `scheme=kakaolink;` +
+        `package=com.kakao.talk;` +
+        `S.browser_fallback_url=${encodeURIComponent(shareUrl)};` +
+        `end;`;
+
+      // iOS는 intent 미지원 → 네이티브 share API 사용
+      if (/iPhone|iPad/i.test(navigator.userAgent)) {
+        if (navigator.share) {
+          navigator.share({ title: "AI 건강검진 분석 결과", text, url: shareUrl });
+        } else {
+          copyToClipboard(text);
+          alert("분석 결과가 복사되었습니다.\n카카오톡에서 붙여넣기 해주세요.");
+        }
+      } else {
+        // Android
+        window.location.href = intentUrl;
+      }
+    } else {
+      // PC: 클립보드 복사 후 카카오톡 웹 안내
+      copyToClipboard(text);
+      alert("분석 결과가 클립보드에 복사되었습니다.\n카카오톡에서 붙여넣기(Ctrl+V) 해주세요.");
+    }
+  };
+
+  const handleShareTwitter = () => {
+    const shareUrl = getShareUrl();
+    const riskLabel = result ? getOverallRiskStyle(result.overallRiskLevel).label : "";
+    const text = `[AI 건강검진 분석] 종합 위험도: ${riskLabel} - ${result?.summary || ""}`;
+    window.open(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`,
+      "_blank",
+      "width=600,height=400"
+    );
+  };
+
+  const handleShareFacebook = () => {
+    window.open(
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getShareUrl())}`,
+      "_blank",
+      "width=600,height=400"
+    );
+  };
+
+  const handleShareNative = () => {
+    setShowShareMenu(true);
+  };
+
+  const KAKAO_CONSULT_URL = "https://open.kakao.com/o/sxmmuyrg";
+
+  const handleReferFriend = () => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const text = `AI가 무료로 건강검진 결과를 분석해주고, 맞춤 보험까지 추천해줍니다!\n지금 바로 분석받아보세요: ${origin}`;
+    copyToClipboard(text);
   };
 
   return (
@@ -378,7 +494,12 @@ export default function Home() {
                       <input
                         type="tel"
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/[^0-9]/g, "").slice(0, 11);
+                          if (v.length <= 3) setPhone(v);
+                          else if (v.length <= 7) setPhone(`${v.slice(0, 3)}-${v.slice(3)}`);
+                          else setPhone(`${v.slice(0, 3)}-${v.slice(3, 7)}-${v.slice(7)}`);
+                        }}
                         placeholder="010-1234-5678"
                         className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
                       />
@@ -816,6 +937,110 @@ export default function Home() {
                     </div>
                   ))}
               </div>
+            </div>
+
+            {/* CTA: 상담 / 공유 / 추천 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* 보험설계사 상담 */}
+              <a
+                href={KAKAO_CONSULT_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 bg-[#FEE500] hover:bg-[#F5DD00] rounded-2xl p-5 shadow-sm border border-yellow-300 transition-all group"
+              >
+                <div className="w-12 h-12 bg-[#3C1E1E] rounded-xl flex items-center justify-center flex-shrink-0">
+                  <MessageCircle className="w-6 h-6 text-[#FEE500]" />
+                </div>
+                <div>
+                  <p className="font-bold text-[#3C1E1E] text-sm">보험설계사 상담</p>
+                  <p className="text-xs text-[#3C1E1E]/70 mt-0.5">
+                    카카오톡으로 전문 상담사와 1:1 상담
+                  </p>
+                </div>
+                <ExternalLink className="w-4 h-4 text-[#3C1E1E]/50 ml-auto group-hover:translate-x-0.5 transition-transform" />
+              </a>
+
+              {/* 결과 공유 */}
+              <div className="relative">
+                <button
+                  onClick={handleShareNative}
+                  className="w-full flex items-center gap-4 bg-white hover:bg-blue-50 rounded-2xl p-5 shadow-sm border border-gray-200 transition-all group"
+                >
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Share2 className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-gray-900 text-sm">분석결과 공유</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      카카오톡, SNS로 결과 전달하기
+                    </p>
+                  </div>
+                </button>
+
+                {/* 공유 메뉴 드롭다운 */}
+                {showShareMenu && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-gray-200 shadow-lg z-20 p-2 space-y-1">
+                    <button
+                      onClick={() => { handleShareKakao(); setShowShareMenu(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-yellow-50 transition text-left"
+                    >
+                      <div className="w-8 h-8 bg-[#FEE500] rounded-lg flex items-center justify-center">
+                        <MessageCircle className="w-4 h-4 text-[#3C1E1E]" />
+                      </div>
+                      <span className="text-sm text-gray-700">카카오톡 공유</span>
+                    </button>
+                    <button
+                      onClick={() => { handleShareTwitter(); setShowShareMenu(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-blue-50 transition text-left"
+                    >
+                      <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">X</span>
+                      </div>
+                      <span className="text-sm text-gray-700">X (Twitter) 공유</span>
+                    </button>
+                    <button
+                      onClick={() => { handleShareFacebook(); setShowShareMenu(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-blue-50 transition text-left"
+                    >
+                      <div className="w-8 h-8 bg-[#1877F2] rounded-lg flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">f</span>
+                      </div>
+                      <span className="text-sm text-gray-700">Facebook 공유</span>
+                    </button>
+                    <button
+                      onClick={() => { handleCopyResult(); setShowShareMenu(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition text-left"
+                    >
+                      <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <Copy className="w-4 h-4 text-gray-600" />
+                      </div>
+                      <span className="text-sm text-gray-700">텍스트 복사</span>
+                    </button>
+                    <button
+                      onClick={() => setShowShareMenu(false)}
+                      className="w-full text-center text-xs text-gray-400 py-1 hover:text-gray-600"
+                    >
+                      닫기
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 친구 추천 */}
+              <button
+                onClick={handleReferFriend}
+                className="flex items-center gap-4 bg-white hover:bg-green-50 rounded-2xl p-5 shadow-sm border border-gray-200 transition-all group"
+              >
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Users className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="text-left">
+                  <p className="font-bold text-gray-900 text-sm">친구에게 추천</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {copied ? "링크가 복사되었습니다!" : "무료 AI 분석 링크 공유하기"}
+                  </p>
+                </div>
+              </button>
             </div>
 
             {/* Disclaimer */}

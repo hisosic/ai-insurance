@@ -14,6 +14,9 @@ import {
   Users,
   TrendingUp,
   Calendar,
+  Lock,
+  LogOut,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -71,6 +74,12 @@ const riskLevelMap: Record<string, { label: string; color: string; bg: string }>
 };
 
 export default function AdminPage() {
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+
   const [records, setRecords] = useState<AnalysisRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -81,6 +90,37 @@ export default function AdminPage() {
   const [parsedDetail, setParsedDetail] = useState<AnalysisDetail | null>(null);
   const limit = 15;
 
+  // 기존 세션 확인
+  useEffect(() => {
+    fetch("/api/admin/results?page=1&limit=1")
+      .then((res) => {
+        if (res.ok) setAuthenticated(true);
+      })
+      .finally(() => setAuthChecking(false));
+  }, []);
+
+  const handleLogin = async () => {
+    setAuthLoading(true);
+    setAuthError("");
+    const res = await fetch("/api/admin/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    if (res.ok) {
+      setAuthenticated(true);
+      setPassword("");
+    } else {
+      setAuthError("비밀번호가 올바르지 않습니다.");
+    }
+    setAuthLoading(false);
+  };
+
+  const handleLogout = async () => {
+    await fetch("/api/admin/auth", { method: "DELETE" });
+    setAuthenticated(false);
+  };
+
   const fetchRecords = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({
@@ -90,6 +130,11 @@ export default function AdminPage() {
     if (search) params.set("search", search);
 
     const res = await fetch(`/api/admin/results?${params}`);
+    if (res.status === 401) {
+      setAuthenticated(false);
+      setLoading(false);
+      return;
+    }
     const data = await res.json();
     setRecords(data.results);
     setTotal(data.total);
@@ -97,8 +142,8 @@ export default function AdminPage() {
   }, [page, search]);
 
   useEffect(() => {
-    fetchRecords();
-  }, [fetchRecords]);
+    if (authenticated) fetchRecords();
+  }, [authenticated, fetchRecords]);
 
   const totalPages = Math.ceil(total / limit);
 
@@ -135,6 +180,70 @@ export default function AdminPage() {
     high: records.filter((r) => r.overall_risk_level === "high").length,
   };
 
+  // 인증 확인 중
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+      </div>
+    );
+  }
+
+  // 로그인 화면
+  if (!authenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="w-full max-w-sm">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+            <div className="text-center mb-6">
+              <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-orange-200">
+                <Lock className="w-7 h-7 text-white" />
+              </div>
+              <h1 className="text-xl font-bold text-gray-900">관리자 로그인</h1>
+              <p className="text-sm text-gray-500 mt-1">비밀번호를 입력해주세요</p>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                  placeholder="관리자 비밀번호"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none text-sm"
+                  autoFocus
+                />
+              </div>
+              {authError && (
+                <p className="text-sm text-red-600 flex items-center gap-1">
+                  <AlertTriangle className="w-4 h-4" />
+                  {authError}
+                </p>
+              )}
+              <button
+                onClick={handleLogin}
+                disabled={authLoading || !password}
+                className="w-full py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+              >
+                {authLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Lock className="w-4 h-4" />
+                )}
+                로그인
+              </button>
+            </div>
+          </div>
+          <p className="text-center text-xs text-gray-400 mt-4">
+            <Link href="/" className="hover:text-orange-500">
+              메인으로 돌아가기
+            </Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -151,13 +260,22 @@ export default function AdminPage() {
               </div>
             </Link>
           </div>
-          <Link
-            href="/"
-            className="text-sm text-gray-500 hover:text-orange-600 flex items-center gap-1"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            메인으로
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleLogout}
+              className="text-sm text-gray-500 hover:text-red-500 flex items-center gap-1 transition"
+            >
+              <LogOut className="w-4 h-4" />
+              로그아웃
+            </button>
+            <Link
+              href="/"
+              className="text-sm text-gray-500 hover:text-orange-600 flex items-center gap-1"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              메인으로
+            </Link>
+          </div>
         </div>
       </header>
 

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAnalysisList, deleteAnalysis } from "@/lib/db";
 
+const UNAUTHORIZED = NextResponse.json({ error: "인증이 필요합니다" }, { status: 401 });
+
 export async function GET(request: NextRequest) {
+  if (request.cookies.get("admin_auth")?.value !== "true") return UNAUTHORIZED;
   const { searchParams } = new URL(request.url);
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "20");
@@ -12,6 +15,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  if (request.cookies.get("admin_auth")?.value !== "true") return UNAUTHORIZED;
   const { searchParams } = new URL(request.url);
   const id = parseInt(searchParams.get("id") || "0");
 
