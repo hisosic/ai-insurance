@@ -10,6 +10,10 @@ function generateToken(): string {
   return crypto.randomBytes(16).toString("base64url");
 }
 
+function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password).digest("hex");
+}
+
 function getDb(): Database.Database {
   if (!db) {
     // Ensure data directory exists
@@ -35,7 +39,16 @@ function getDb(): Database.Database {
         overall_risk_level TEXT NOT NULL,
         summary TEXT NOT NULL,
         analysis_json TEXT NOT NULL,
+        memo TEXT DEFAULT '',
         created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      )
+    `);
+
+    // Create admin settings table
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS admin_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
       )
     `);
 
@@ -52,6 +65,11 @@ function getDb(): Database.Database {
       // Add unique index after backfill
       db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_share_token ON analysis_results(share_token)");
     }
+
+    // Migrate: add memo column if missing
+    if (!columns.some((c) => c.name === "memo")) {
+      db.exec("ALTER TABLE analysis_results ADD COLUMN memo TEXT DEFAULT ''");
+    }
   }
   return db;
 }
@@ -66,6 +84,7 @@ export interface AnalysisRecord {
   overall_risk_level: string;
   summary: string;
   analysis_json: string;
+  memo: string;
   created_at: string;
 }
 
@@ -138,4 +157,38 @@ export function deleteAnalysis(id: number): boolean {
   const stmt = db.prepare("DELETE FROM analysis_results WHERE id = ?");
   const result = stmt.run(id);
   return result.changes > 0;
+}
+
+export function updateMemo(id: number, memo: string): boolean {
+  const db = getDb();
+  const stmt = db.prepare("UPDATE analysis_results SET memo = ? WHERE id = ?");
+  const result = stmt.run(memo, id);
+  return result.changes > 0;
+}
+
+// Admin password management
+const DEFAULT_PASSWORD = process.env.ADMIN_PASSWORD || "admin1234";
+
+export function verifyAdminPassword(password: string): boolean {
+  const db = getDb();
+  const row = db.prepare("SELECT value FROM admin_settings WHERE key = 'admin_password_hash'").get() as { value: string } | undefined;
+  if (row) {
+    return row.value === hashPassword(password);
+  }
+  // Fallback to env/default password
+  return password === DEFAULT_PASSWORD;
+}
+
+export function changeAdminPassword(currentPassword: string, newPassword: string): { success: boolean; error?: string } {
+  if (!verifyAdminPassword(currentPassword)) {
+    return { success: false, error: "현재 비밀번호가 올바르지 않습니다" };
+  }
+  if (newPassword.length < 4) {
+    return { success: false, error: "새 비밀번호는 4자 이상이어야 합니다" };
+  }
+  const db = getDb();
+  db.prepare(
+    "INSERT INTO admin_settings (key, value) VALUES ('admin_password_hash', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+  ).run(hashPassword(newPassword));
+  return { success: true };
 }

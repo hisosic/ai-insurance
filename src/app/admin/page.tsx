@@ -17,6 +17,9 @@ import {
   Lock,
   LogOut,
   Loader2,
+  KeyRound,
+  StickyNote,
+  Save,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -29,6 +32,7 @@ interface AnalysisRecord {
   overall_risk_level: string;
   summary: string;
   analysis_json: string;
+  memo: string;
   created_at: string;
 }
 
@@ -89,6 +93,20 @@ export default function AdminPage() {
   const [selectedRecord, setSelectedRecord] = useState<AnalysisRecord | null>(null);
   const [parsedDetail, setParsedDetail] = useState<AnalysisDetail | null>(null);
   const limit = 15;
+
+  // 비밀번호 변경 상태
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [pwError, setPwError] = useState("");
+  const [pwSuccess, setPwSuccess] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
+
+  // 메모 상태
+  const [memoText, setMemoText] = useState("");
+  const [memoSaving, setMemoSaving] = useState(false);
+  const [memoSaved, setMemoSaved] = useState(false);
 
   // 기존 세션 확인
   useEffect(() => {
@@ -164,11 +182,73 @@ export default function AdminPage() {
 
   const handleView = (record: AnalysisRecord) => {
     setSelectedRecord(record);
+    setMemoText(record.memo || "");
+    setMemoSaved(false);
     try {
       setParsedDetail(JSON.parse(record.analysis_json));
     } catch {
       setParsedDetail(null);
     }
+  };
+
+  const handlePasswordChange = async () => {
+    setPwError("");
+    setPwSuccess("");
+
+    if (!currentPw || !newPw) {
+      setPwError("모든 항목을 입력해주세요.");
+      return;
+    }
+    if (newPw !== confirmPw) {
+      setPwError("새 비밀번호가 일치하지 않습니다.");
+      return;
+    }
+    if (newPw.length < 4) {
+      setPwError("새 비밀번호는 4자 이상이어야 합니다.");
+      return;
+    }
+
+    setPwLoading(true);
+    const res = await fetch("/api/admin/auth", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      setPwSuccess("비밀번호가 변경되었습니다.");
+      setCurrentPw("");
+      setNewPw("");
+      setConfirmPw("");
+      setTimeout(() => {
+        setShowPasswordModal(false);
+        setPwSuccess("");
+      }, 1500);
+    } else {
+      setPwError(data.error || "비밀번호 변경에 실패했습니다.");
+    }
+    setPwLoading(false);
+  };
+
+  const handleSaveMemo = async () => {
+    if (!selectedRecord) return;
+    setMemoSaving(true);
+    const res = await fetch("/api/admin/results", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: selectedRecord.id, memo: memoText }),
+    });
+    if (res.ok) {
+      setMemoSaved(true);
+      // Update local record
+      setRecords((prev) =>
+        prev.map((r) => (r.id === selectedRecord.id ? { ...r, memo: memoText } : r))
+      );
+      setSelectedRecord({ ...selectedRecord, memo: memoText });
+      setTimeout(() => setMemoSaved(false), 2000);
+    }
+    setMemoSaving(false);
   };
 
   const getRisk = (level: string) => riskLevelMap[level] || riskLevelMap.unknown;
@@ -261,6 +341,21 @@ export default function AdminPage() {
             </Link>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setShowPasswordModal(true);
+                setPwError("");
+                setPwSuccess("");
+                setCurrentPw("");
+                setNewPw("");
+                setConfirmPw("");
+              }}
+              className="text-sm text-gray-500 hover:text-orange-500 flex items-center gap-1 transition"
+              title="비밀번호 변경"
+            >
+              <KeyRound className="w-4 h-4" />
+              비밀번호 변경
+            </button>
             <button
               onClick={handleLogout}
               className="text-sm text-gray-500 hover:text-red-500 flex items-center gap-1 transition"
@@ -377,6 +472,7 @@ export default function AdminPage() {
                     <th className="text-left px-4 py-3 font-medium text-gray-600">연락처</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">위험도</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">요약</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-600">메모</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">분석일시</th>
                     <th className="text-center px-4 py-3 font-medium text-gray-600">관리</th>
                   </tr>
@@ -403,6 +499,16 @@ export default function AdminPage() {
                         </td>
                         <td className="px-4 py-3 text-gray-600 max-w-xs truncate">
                           {record.summary}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 max-w-[120px] truncate">
+                          {record.memo ? (
+                            <span className="flex items-center gap-1 text-xs text-orange-600">
+                              <StickyNote className="w-3 h-3" />
+                              {record.memo}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-300">-</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
                           {record.created_at}
@@ -513,6 +619,38 @@ export default function AdminPage() {
 
             {/* Modal Body */}
             <div className="overflow-y-auto p-6 space-y-6">
+              {/* Memo */}
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-amber-800 text-sm flex items-center gap-1.5">
+                    <StickyNote className="w-4 h-4" />
+                    관리자 메모
+                  </h3>
+                  <button
+                    onClick={handleSaveMemo}
+                    disabled={memoSaving}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 transition"
+                  >
+                    {memoSaving ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Save className="w-3 h-3" />
+                    )}
+                    {memoSaved ? "저장됨" : "저장"}
+                  </button>
+                </div>
+                <textarea
+                  value={memoText}
+                  onChange={(e) => {
+                    setMemoText(e.target.value);
+                    setMemoSaved(false);
+                  }}
+                  placeholder="이 분석 결과에 대한 메모를 작성하세요..."
+                  className="w-full px-3 py-2 border border-amber-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none resize-none"
+                  rows={3}
+                />
+              </div>
+
               {/* Summary */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
@@ -654,6 +792,78 @@ export default function AdminPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Change Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-orange-500" />
+                비밀번호 변경
+              </h2>
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">현재 비밀번호</label>
+                <input
+                  type="password"
+                  value={currentPw}
+                  onChange={(e) => setCurrentPw(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">새 비밀번호</label>
+                <input
+                  type="password"
+                  value={newPw}
+                  onChange={(e) => setNewPw(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">새 비밀번호 확인</label>
+                <input
+                  type="password"
+                  value={confirmPw}
+                  onChange={(e) => setConfirmPw(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handlePasswordChange()}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                />
+              </div>
+              {pwError && (
+                <p className="text-sm text-red-600 flex items-center gap-1">
+                  <AlertTriangle className="w-4 h-4" />
+                  {pwError}
+                </p>
+              )}
+              {pwSuccess && (
+                <p className="text-sm text-green-600 font-medium">{pwSuccess}</p>
+              )}
+              <button
+                onClick={handlePasswordChange}
+                disabled={pwLoading || !currentPw || !newPw || !confirmPw}
+                className="w-full py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+              >
+                {pwLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <KeyRound className="w-4 h-4" />
+                )}
+                비밀번호 변경
+              </button>
             </div>
           </div>
         </div>

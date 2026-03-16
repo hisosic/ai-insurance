@@ -13,6 +13,31 @@ import {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
+// ─── 민감정보 마스킹 유틸 ───
+function maskSensitiveInfo(text: string, name: string, phone: string): string {
+  let masked = text;
+  // 이름 마스킹
+  if (name && name.length >= 2) {
+    masked = masked.replaceAll(name, "***");
+  }
+  // 연락처 마스킹 (다양한 형식: 010-1234-5678, 01012345678, 010 1234 5678)
+  if (phone) {
+    const digitsOnly = phone.replace(/[^0-9]/g, "");
+    if (digitsOnly.length >= 10) {
+      // 원본 형식 그대로 마스킹
+      masked = masked.replaceAll(phone, "***-****-****");
+      // 숫자만 있는 형태도 마스킹
+      masked = masked.replaceAll(digitsOnly, "***********");
+      // 하이픈 포함 다른 형식도 마스킹
+      const formatted = `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3, 7)}-${digitsOnly.slice(7)}`;
+      masked = masked.replaceAll(formatted, "***-****-****");
+    }
+  }
+  // 주민등록번호 패턴 마스킹 (XXXXXX-XXXXXXX)
+  masked = masked.replace(/\d{6}\s*-\s*\d{7}/g, "******-*******");
+  return masked;
+}
+
 // ─── Step 1: 수치 추출 모델 (temperature 0, JSON 강제) ───
 const extractionModel = genAI.getGenerativeModel({
   model: "gemini-2.5-flash",
@@ -35,6 +60,8 @@ const analysisModel = genAI.getGenerativeModel({
 
 // ─── Step 1 프롬프트: 수치만 추출 ───
 const EXTRACTION_PROMPT = `당신은 건강검진 결과지에서 수치를 정확하게 추출하는 전문가입니다.
+
+중요: 문서에 포함된 이름, 연락처, 주민등록번호, 주소 등 개인정보는 절대 추출하거나 응답에 포함하지 마세요. 오직 건강검진 수치만 추출하세요.
 
 아래 건강검진 데이터에서 수치를 추출하여 JSON으로 응답하세요.
 수치가 존재하지 않거나 읽을 수 없는 항목은 null로 표기하세요.
@@ -110,8 +137,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const extractionInput = textInput?.trim()
-      ? `${EXTRACTION_PROMPT}\n\n## 건강검진 데이터\n${textInput.trim()}`
+    // 텍스트 입력에서 민감정보 마스킹
+    const maskedTextInput = textInput?.trim()
+      ? maskSensitiveInfo(textInput.trim(), name, phone)
+      : null;
+
+    const extractionInput = maskedTextInput
+      ? `${EXTRACTION_PROMPT}\n\n## 건강검진 데이터\n${maskedTextInput}`
       : EXTRACTION_PROMPT;
     extractionParts.push(extractionInput);
 
