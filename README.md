@@ -1,4 +1,4 @@
-# 단비 (Danbee) - AI 건강검진 분석 서비스
+# AI 건강검진 분석 서비스
 
 건강검진 결과지를 AI로 분석하여 부위별 위험도를 산정하고, 맞춤 보험상품을 추천하는 웹 서비스입니다.
 
@@ -175,16 +175,16 @@ docker compose up -d
 
 ```bash
 # 이미지 빌드
-docker build -t danbee .
+docker build -t bomai .
 
 # 실행
 docker run -d \
-  --name danbee-app \
+  --name bomai-app \
   -p 3000:3000 \
   -e GEMINI_API_KEY=your_key \
   -e ADMIN_PASSWORD=your_password \
-  -v danbee-data:/app/data \
-  danbee
+  -v bomai-data:/app/data \
+  bomai
 ```
 
 ### 크로스 플랫폼 빌드 (Apple Silicon → amd64 서버)
@@ -203,7 +203,7 @@ ssh user@server "cd ~/bomai && sudo docker compose pull -q && sudo docker compos
 services:
   app:
     build: .
-    container_name: danbee-app
+    container_name: bomai-app
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -211,14 +211,14 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin1234}
     volumes:
-      - danbee-data:/app/data
+      - bomai-data:/app/data
 
 volumes:
-  danbee-data:
+  bomai-data:
     driver: local
 ```
 
-SQLite 데이터베이스는 `danbee-data` 볼륨에 영속 저장됩니다.
+SQLite 데이터베이스는 `bomai-data` 볼륨에 영속 저장됩니다.
 
 ---
 
