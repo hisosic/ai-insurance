@@ -20,9 +20,12 @@ import {
   Share2,
   Users,
   Copy,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import type { AnalysisResult } from "@/lib/types";
 import { getOverallRiskStyle } from "@/lib/risk-utils";
+import { SAMPLE_RESULT } from "@/lib/sample-result";
 import {
   MedicalNoticeBanner,
   OverallSummary,
@@ -53,6 +56,7 @@ export default function Home() {
   const [showSensitiveDetail, setShowSensitiveDetail] = useState(false);
   const [recordId, setRecordId] = useState<number | null>(null);
   const [shareToken, setShareToken] = useState<string | null>(null);
+  const [showSample, setShowSample] = useState(false);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -265,6 +269,13 @@ export default function Home() {
                 <br />
                 취약 부위와 맞춤 보험상품을 추천해드립니다.
               </p>
+              <button
+                onClick={() => setShowSample(true)}
+                className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-orange-200 text-orange-600 font-medium rounded-xl hover:bg-orange-50 hover:border-orange-300 transition-all text-sm shadow-sm"
+              >
+                <Eye className="w-4 h-4" />
+                분석 결과 샘플 보기
+              </button>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -301,48 +312,54 @@ export default function Home() {
                 </div>
 
                 {inputMode === "file" ? (
-                  <div
-                    {...getRootProps()}
-                    className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-                      isDragActive
-                        ? "border-orange-400 bg-orange-50"
-                        : file
-                        ? "border-green-400 bg-green-50"
-                        : "border-gray-300 hover:border-orange-300 hover:bg-orange-50/50"
-                    }`}
-                  >
-                    <input {...getInputProps()} />
-                    {file ? (
-                      <div className="flex flex-col items-center gap-2">
-                        <CheckCircle className="w-12 h-12 text-green-500" />
-                        <p className="font-medium text-green-700">{file.name}</p>
-                        <p className="text-sm text-green-600">
-                          {(file.size / 1024 / 1024).toFixed(1)}MB
-                        </p>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setFile(null);
-                          }}
-                          className="mt-2 text-sm text-gray-500 hover:text-red-500 flex items-center gap-1"
-                        >
-                          <X className="w-4 h-4" /> 파일 변경
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-3">
-                        <Upload className="w-12 h-12 text-gray-400" />
-                        <div>
-                          <p className="font-medium text-gray-700">
-                            {isDragActive ? "여기에 놓아주세요!" : "클릭하거나 파일을 드래그하세요"}
+                  <>
+                    <div
+                      {...getRootProps()}
+                      className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+                        isDragActive
+                          ? "border-orange-400 bg-orange-50"
+                          : file
+                          ? "border-green-400 bg-green-50"
+                          : "border-gray-300 hover:border-orange-300 hover:bg-orange-50/50"
+                      }`}
+                    >
+                      <input {...getInputProps()} />
+                      {file ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <CheckCircle className="w-12 h-12 text-green-500" />
+                          <p className="font-medium text-green-700">{file.name}</p>
+                          <p className="text-sm text-green-600">
+                            {(file.size / 1024 / 1024).toFixed(1)}MB
                           </p>
-                          <p className="text-sm text-gray-500 mt-1">
-                            PDF, JPG, PNG (최대 20MB)
-                          </p>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFile(null);
+                            }}
+                            className="mt-2 text-sm text-gray-500 hover:text-red-500 flex items-center gap-1"
+                          >
+                            <X className="w-4 h-4" /> 파일 변경
+                          </button>
                         </div>
-                      </div>
-                    )}
-                  </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-3">
+                          <Upload className="w-12 h-12 text-gray-400" />
+                          <div>
+                            <p className="font-medium text-gray-700">
+                              {isDragActive ? "여기에 놓아주세요!" : "클릭하거나 파일을 드래그하세요"}
+                            </p>
+                            <p className="text-sm text-gray-500 mt-1">
+                              PDF, JPG, PNG (최대 20MB)
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                      <AlertTriangle className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      비밀번호가 설정된 문서는 분석이 불가합니다. 비밀번호를 해제 후 업로드해주세요.
+                    </p>
+                  </>
                 ) : (
                   <div>
                     <textarea
@@ -434,6 +451,19 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Privacy Masking Notice */}
+            <div className="max-w-4xl mx-auto mt-6 bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 flex items-start gap-3">
+              <EyeOff className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-800 leading-relaxed">
+                <p className="font-semibold mb-1">민감정보 보호 안내</p>
+                <p className="text-xs text-blue-700">
+                  업로드된 건강검진 결과지에 포함된 <span className="font-medium">주민등록번호, 주소, 수진자 고유 식별정보</span> 등
+                  분석에 불필요한 민감 항목은 AI가 자동으로 인식하여 <span className="font-medium">마스킹(숨김) 처리 후 전송</span>됩니다.
+                  수치 데이터와 검사 결과만 분석에 활용되며, 원본 파일은 서버에 저장되지 않습니다.
+                </p>
               </div>
             </div>
 
@@ -751,6 +781,56 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* Sample Result Modal */}
+      {showSample && (
+        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm overflow-y-auto">
+          <div className="min-h-screen py-8 px-4">
+            <div className="max-w-6xl mx-auto">
+              {/* Header bar */}
+              <div className="bg-orange-500 text-white rounded-t-2xl px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+                <div className="flex items-center gap-2">
+                  <Eye className="w-5 h-5" />
+                  <span className="font-semibold">샘플 분석 결과</span>
+                  <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full ml-2">
+                    참고용 예시
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowSample(false)}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition text-sm font-medium"
+                >
+                  <X className="w-4 h-4" />
+                  닫기
+                </button>
+              </div>
+
+              {/* Sample result content */}
+              <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50 rounded-b-2xl p-6 space-y-8">
+                <MedicalNoticeBanner />
+                <OverallSummary result={SAMPLE_RESULT} />
+                <CategoryAnalysis result={SAMPLE_RESULT} />
+                <TopRisks result={SAMPLE_RESULT} />
+                <Recommendations result={SAMPLE_RESULT} />
+                <InsuranceRecommendations result={SAMPLE_RESULT} />
+                <LegalDisclaimer />
+
+                {/* CTA to go back */}
+                <div className="text-center pt-4 pb-2">
+                  <button
+                    onClick={() => setShowSample(false)}
+                    className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-200 hover:from-orange-600 hover:to-orange-700 transition-all text-lg"
+                  >
+                    <Activity className="w-5 h-5" />
+                    나도 분석받기
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>
