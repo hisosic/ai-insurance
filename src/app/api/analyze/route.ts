@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { insuranceProducts } from "@/lib/insurance-products";
 import { saveAnalysis } from "@/lib/db";
+import { sendTelegramNotification } from "@/lib/telegram";
 import {
   ExtractedMetrics,
   gradeAllMetrics,
@@ -11,7 +12,33 @@ import {
   buildFindings,
 } from "@/lib/health-scoring";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+// ─── Gemini API 키 폴백 ───
+const GEMINI_API_KEYS = [
+  process.env.GEMINI_API_KEY || "",
+  process.env.GEMINI_API_KEY_BACKUP || "",
+].filter(Boolean);
+
+function createGenAI(keyIndex = 0): GoogleGenerativeAI {
+  return new GoogleGenerativeAI(GEMINI_API_KEYS[keyIndex] || "");
+}
+
+function getModels(genAI: GoogleGenerativeAI) {
+  const config = {
+    temperature: 0,
+    topP: 1,
+    responseMimeType: "application/json" as const,
+  };
+  return {
+    extractionModel: genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      generationConfig: config,
+    }),
+    analysisModel: genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      generationConfig: config,
+    }),
+  };
+}
 
 // ─── 민감정보 마스킹 유틸 ───
 function maskSensitiveInfo(text: string, name: string, phone: string): string {
@@ -37,26 +64,6 @@ function maskSensitiveInfo(text: string, name: string, phone: string): string {
   masked = masked.replace(/\d{6}\s*-\s*\d{7}/g, "******-*******");
   return masked;
 }
-
-// ─── Step 1: 수치 추출 모델 (temperature 0, JSON 강제) ───
-const extractionModel = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash",
-  generationConfig: {
-    temperature: 0,
-    topP: 1,
-    responseMimeType: "application/json",
-  },
-});
-
-// ─── Step 2: 소견 생성 모델 (temperature 0) ───
-const analysisModel = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash",
-  generationConfig: {
-    temperature: 0,
-    topP: 1,
-    responseMimeType: "application/json",
-  },
-});
 
 // ─── Step 1 프롬프트: 수치만 추출 ───
 const EXTRACTION_PROMPT = `당신은 건강검진 결과지에서 수치를 정확하게 추출하는 전문가입니다.
@@ -124,6 +131,45 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+
+    // ─── Gemini API 키 폴백으로 모델 생성 ───
+    let lastError: Error | null = null;
+    for (let keyIdx = 0; keyIdx < GEMINI_API_KEYS.length; keyIdx++) {
+      try {
+        const genAI = createGenAI(keyIdx);
+        const { extractionModel, analysisModel } = getModels(genAI);
+        const result = await runAnalysis(
+          extractionModel, analysisModel,
+          { file, base64, mimeType, textInput, name, age, gender, phone }
+        );
+        return result;
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        console.warn(`Gemini API key #${keyIdx + 1} failed:`, lastError.message);
+        if (keyIdx < GEMINI_API_KEYS.length - 1) {
+          console.log(`Retrying with backup key #${keyIdx + 2}...`);
+        }
+      }
+    }
+    throw lastError || new Error("모든 API 키가 실패했습니다");
+  } catch (error) {
+    console.error("Analysis error:", error);
+    const message =
+      error instanceof Error ? error.message : "분석 중 오류가 발생했습니다";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// ─── 분석 실행 함수 ───
+async function runAnalysis(
+  extractionModel: ReturnType<GoogleGenerativeAI["getGenerativeModel"]>,
+  analysisModel: ReturnType<GoogleGenerativeAI["getGenerativeModel"]>,
+  input: {
+    file: File | null; base64: string; mimeType: string;
+    textInput: string | null; name: string; age: string; gender: string; phone: string;
+  }
+) {
+    const { file, base64, mimeType, textInput, name, age, gender, phone } = input;
 
     // ═══════════════════════════════════════════
     // STEP 1: 수치 추출 (결정적)
@@ -288,6 +334,14 @@ ${productSummary}
     // Save to DB
     const { id: recordId, shareToken } = saveAnalysis({ name, age, gender, phone }, analysis);
 
+    // Telegram 알림 (비동기, 실패해도 응답에 영향 없음)
+    sendTelegramNotification({
+      name, age, gender, phone,
+      overallRiskLevel,
+      summary: analysis.summary,
+      recordId,
+    });
+
     return NextResponse.json({
       success: true,
       analysis,
@@ -295,10 +349,4 @@ ${productSummary}
       recordId,
       shareToken,
     });
-  } catch (error) {
-    console.error("Analysis error:", error);
-    const message =
-      error instanceof Error ? error.message : "분석 중 오류가 발생했습니다";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
 }
