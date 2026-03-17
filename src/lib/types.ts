@@ -31,6 +31,7 @@ export interface InsuranceRecommendation {
 export interface AnalysisResult {
   summary: string;
   overallRiskLevel: string;
+  healthScore: number;
   categories: AnalysisCategory[];
   topRisks: TopRisk[];
   recommendations: {

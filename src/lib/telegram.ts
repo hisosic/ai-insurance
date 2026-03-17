@@ -7,6 +7,7 @@ export async function sendTelegramNotification(data: {
   gender: string;
   phone: string;
   overallRiskLevel: string;
+  healthScore: number;
   summary: string;
   recordId: number;
 }) {
@@ -36,6 +37,7 @@ export async function sendTelegramNotification(data: {
     `📅 <b>나이:</b> ${data.age}세 / ${data.gender}`,
     `📞 <b>연락처:</b> ${data.phone || "미입력"}`,
     ``,
+    `💯 <b>건강 점수:</b> ${data.healthScore}점 / 100점`,
     `${emoji} <b>종합 위험도:</b> ${label}`,
     `📝 ${data.summary}`,
     ``,

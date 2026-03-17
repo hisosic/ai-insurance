@@ -9,6 +9,7 @@ import {
   computeRiskScore,
   computeStatus,
   computeOverallRiskLevel,
+  computeHealthScore,
   buildFindings,
 } from "@/lib/health-scoring";
 
@@ -222,6 +223,7 @@ async function runAnalysis(
 
     const allScores = categories.map((c) => c.riskScore);
     const overallRiskLevel = computeOverallRiskLevel(allScores);
+    const healthScore = computeHealthScore(allScores);
 
     // ═══════════════════════════════════════════
     // STEP 3: AI 소견 생성 (점수는 고정, 텍스트만 생성)
@@ -315,6 +317,7 @@ ${productSummary}
     const analysis = {
       summary: aiSogyeon.summary || "",
       overallRiskLevel,
+      healthScore,
       categories: finalCategories,
       topRisks: aiSogyeon.topRisks || [],
       recommendations: aiSogyeon.recommendations || {
@@ -338,6 +341,7 @@ ${productSummary}
     sendTelegramNotification({
       name, age, gender, phone,
       overallRiskLevel,
+      healthScore,
       summary: analysis.summary,
       recordId,
     });

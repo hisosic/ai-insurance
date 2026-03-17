@@ -172,6 +172,30 @@ export function computeOverallRiskLevel(scores: number[]): string {
   return "low";
 }
 
+/**
+ * 100점 만점 건강 점수 계산
+ * 각 카테고리의 riskScore(1~10)를 기반으로 역산
+ * riskScore가 낮을수록 건강 점수가 높음
+ */
+export function computeHealthScore(categoryScores: number[]): number {
+  if (categoryScores.length === 0) return 95;
+
+  // 각 카테고리별 점수: (10 - riskScore) / 10 * 100 → 카테고리당 0~100점
+  const categoryHealthScores = categoryScores.map((rs) =>
+    Math.max(0, Math.round(((10 - rs) / 8) * 100))
+  );
+
+  // 가중 평균 (70%) + 최저 카테고리 (30%)
+  const avg =
+    categoryHealthScores.reduce((a, b) => a + b, 0) /
+    categoryHealthScores.length;
+  const min = Math.min(...categoryHealthScores);
+  const raw = avg * 0.7 + min * 0.3;
+
+  // 0~100 범위로 클램프
+  return Math.max(0, Math.min(100, Math.round(raw)));
+}
+
 export function buildFindings(grades: GradeResult[]): string[] {
   return grades.map((g) => {
     const statusLabel =

@@ -14,6 +14,7 @@ import {
 import type { AnalysisResult } from "@/lib/types";
 import {
   MedicalNoticeBanner,
+  HealthScoreGauge,
   OverallSummary,
   CategoryAnalysis,
   TopRisks,
@@ -119,6 +120,7 @@ export default function ResultPage() {
           </p>
         </div>
 
+        <HealthScoreGauge result={result} />
         <MedicalNoticeBanner />
         <OverallSummary result={result} />
         <CategoryAnalysis result={result} />

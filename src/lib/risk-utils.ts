@@ -38,4 +38,14 @@ export function getProbabilityBadge(prob: string) {
   }
 }
 
+export function getHealthScoreStyle(score: number) {
+  if (score >= 80)
+    return { color: "text-green-600", bg: "bg-green-500", ring: "ring-green-200", label: "우수", gradient: "from-green-400 to-green-600" };
+  if (score >= 60)
+    return { color: "text-yellow-600", bg: "bg-yellow-500", ring: "ring-yellow-200", label: "양호", gradient: "from-yellow-400 to-yellow-600" };
+  if (score >= 40)
+    return { color: "text-orange-600", bg: "bg-orange-500", ring: "ring-orange-200", label: "주의", gradient: "from-orange-400 to-orange-600" };
+  return { color: "text-red-600", bg: "bg-red-500", ring: "ring-red-200", label: "위험", gradient: "from-red-400 to-red-600" };
+}
+
 export const KAKAO_CONSULT_URL = "https://open.kakao.com/o/sxmmuyrg";

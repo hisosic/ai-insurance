@@ -14,6 +14,7 @@ import {
   getRiskColor,
   getRiskBarColor,
   getOverallRiskStyle,
+  getHealthScoreStyle,
   getProbabilityBadge,
   KAKAO_CONSULT_URL,
 } from "@/lib/risk-utils";
@@ -30,20 +31,37 @@ export function MedicalNoticeBanner() {
   );
 }
 
-export function OverallSummary({ result }: { result: AnalysisResult }) {
+export function HealthScoreGauge({ result }: { result: AnalysisResult }) {
+  const score = result.healthScore ?? 0;
+  const scoreStyle = getHealthScoreStyle(score);
   const riskStyle = getOverallRiskStyle(result.overallRiskLevel);
+
+  const bgColor = score >= 80 ? "bg-green-500" : score >= 60 ? "bg-yellow-500" : score >= 40 ? "bg-orange-500" : "bg-red-500";
+  const ringColor = score >= 80 ? "ring-green-200" : score >= 60 ? "ring-yellow-200" : score >= 40 ? "ring-orange-200" : "ring-red-200";
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col items-center justify-center">
+      <div className={`w-28 h-28 ${bgColor} rounded-full ring-4 ${ringColor} flex items-center justify-center shadow-lg`}>
+        <span className="text-4xl font-black text-white">{score}</span>
+      </div>
+      <div className="flex items-center justify-center gap-2 mt-3">
+        <span className={`px-3 py-1 rounded-full text-sm font-bold ${scoreStyle.color}`}
+          style={{ backgroundColor: score >= 80 ? "#f0fdf4" : score >= 60 ? "#fefce8" : score >= 40 ? "#fff7ed" : "#fef2f2" }}>
+          {scoreStyle.label}
+        </span>
+        <span className={`px-3 py-1 rounded-full border text-xs font-medium ${riskStyle.bg} ${riskStyle.text} ${riskStyle.border}`}>
+          위험도: {riskStyle.label}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export function OverallSummary({ result }: { result: AnalysisResult }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">종합 건강 분석 결과</h2>
-          <p className="text-gray-600 leading-relaxed">{result.summary}</p>
-        </div>
-        <div className={`ml-4 px-4 py-2 rounded-xl border ${riskStyle.bg} ${riskStyle.text} ${riskStyle.border}`}>
-          <p className="text-xs font-medium">종합 위험도</p>
-          <p className="text-xl font-bold">{riskStyle.label}</p>
-        </div>
-      </div>
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">종합 건강 분석 결과</h2>
+      <p className="text-gray-600 leading-relaxed">{result.summary}</p>
     </div>
   );
 }

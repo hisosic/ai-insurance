@@ -4,6 +4,7 @@ export const SAMPLE_RESULT: AnalysisResult = {
   summary:
     "전반적으로 대사증후군 초기 징후가 관찰됩니다. 혈당과 콜레스테롤 수치가 경계 범위에 있으며, 간 기능 수치가 다소 상승되어 있습니다. 즉각적인 위험은 낮으나, 생활습관 개선과 정기적인 추적 관찰이 필요합니다.",
   overallRiskLevel: "moderate",
+  healthScore: 62,
   categories: [
     {
       name: "심혈관계",

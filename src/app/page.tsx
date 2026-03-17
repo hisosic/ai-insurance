@@ -28,6 +28,7 @@ import { getOverallRiskStyle } from "@/lib/risk-utils";
 import { SAMPLE_RESULT } from "@/lib/sample-result";
 import {
   MedicalNoticeBanner,
+  HealthScoreGauge,
   OverallSummary,
   CategoryAnalysis,
   TopRisks,
@@ -682,8 +683,11 @@ export default function Home() {
               새로운 분석하기
             </button>
 
+            <div className="grid md:grid-cols-[1fr_auto] gap-4 items-stretch">
+              <OverallSummary result={result} />
+              <HealthScoreGauge result={result} />
+            </div>
             <MedicalNoticeBanner />
-            <OverallSummary result={result} />
 
             <CategoryAnalysis result={result} />
             <TopRisks result={result} />
@@ -807,8 +811,11 @@ export default function Home() {
 
               {/* Sample result content */}
               <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50 rounded-b-2xl p-6 space-y-8">
+                <div className="grid md:grid-cols-[1fr_auto] gap-4 items-stretch">
+                  <OverallSummary result={SAMPLE_RESULT} />
+                  <HealthScoreGauge result={SAMPLE_RESULT} />
+                </div>
                 <MedicalNoticeBanner />
-                <OverallSummary result={SAMPLE_RESULT} />
                 <CategoryAnalysis result={SAMPLE_RESULT} />
                 <TopRisks result={SAMPLE_RESULT} />
                 <Recommendations result={SAMPLE_RESULT} />
