@@ -1,4 +1,5 @@
 export function getRiskColor(score: number) {
+  if (score < 0) return "text-gray-500 bg-gray-50 border-gray-200";
   if (score <= 3) return "text-green-600 bg-green-50 border-green-200";
   if (score <= 5) return "text-yellow-600 bg-yellow-50 border-yellow-200";
   if (score <= 7) return "text-orange-600 bg-orange-50 border-orange-200";
@@ -6,6 +7,7 @@ export function getRiskColor(score: number) {
 }
 
 export function getRiskBarColor(score: number) {
+  if (score < 0) return "bg-gray-400";
   if (score <= 3) return "bg-green-500";
   if (score <= 5) return "bg-yellow-500";
   if (score <= 7) return "bg-orange-500";
@@ -39,6 +41,8 @@ export function getProbabilityBadge(prob: string) {
 }
 
 export function getHealthScoreStyle(score: number) {
+  if (score < 0)
+    return { color: "text-gray-500", bg: "bg-gray-400", ring: "ring-gray-200", label: "판정불가", gradient: "from-gray-300 to-gray-500" };
   if (score >= 80)
     return { color: "text-green-600", bg: "bg-green-500", ring: "ring-green-200", label: "우수", gradient: "from-green-400 to-green-600" };
   if (score >= 60)

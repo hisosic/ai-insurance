@@ -39,6 +39,7 @@ interface AnalysisRecord {
 interface AnalysisDetail {
   summary: string;
   overallRiskLevel: string;
+  healthScore?: number;
   categories: {
     name: string;
     riskScore: number;
@@ -203,8 +204,8 @@ export default function AdminPage() {
       setPwError("새 비밀번호가 일치하지 않습니다.");
       return;
     }
-    if (newPw.length < 4) {
-      setPwError("새 비밀번호는 4자 이상이어야 합니다.");
+    if (newPw.length < 8) {
+      setPwError("새 비밀번호는 8자 이상이어야 합니다.");
       return;
     }
 
@@ -470,6 +471,7 @@ export default function AdminPage() {
                     <th className="text-left px-4 py-3 font-medium text-gray-600">나이</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">성별</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">연락처</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-600">점수</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">위험도</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">요약</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">메모</th>
@@ -480,6 +482,11 @@ export default function AdminPage() {
                 <tbody>
                   {records.map((record) => {
                     const risk = getRisk(record.overall_risk_level);
+                    let healthScore: number | null = null;
+                    try {
+                      const parsed = JSON.parse(record.analysis_json);
+                      healthScore = parsed.healthScore ?? null;
+                    } catch { /* ignore */ }
                     return (
                       <tr
                         key={record.id}
@@ -490,6 +497,20 @@ export default function AdminPage() {
                         <td className="px-4 py-3 text-gray-600">{record.age}세</td>
                         <td className="px-4 py-3 text-gray-600">{record.gender}</td>
                         <td className="px-4 py-3 text-gray-600">{record.phone || "-"}</td>
+                        <td className="px-4 py-3">
+                          {healthScore !== null ? (
+                            <span className={`font-bold text-sm ${
+                              healthScore >= 80 ? "text-green-600" :
+                              healthScore >= 60 ? "text-yellow-600" :
+                              healthScore >= 40 ? "text-orange-600" :
+                              "text-red-600"
+                            }`}>
+                              {healthScore}점
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-300">-</span>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <span
                             className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${risk.bg} ${risk.color}`}
@@ -661,6 +682,16 @@ export default function AdminPage() {
                   >
                     종합: {getRisk(parsedDetail.overallRiskLevel).label}
                   </span>
+                  {parsedDetail.healthScore != null && (
+                    <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                      parsedDetail.healthScore >= 80 ? "bg-green-100 text-green-700" :
+                      parsedDetail.healthScore >= 60 ? "bg-yellow-100 text-yellow-700" :
+                      parsedDetail.healthScore >= 40 ? "bg-orange-100 text-orange-700" :
+                      "bg-red-100 text-red-700"
+                    }`}>
+                      건강점수: {parsedDetail.healthScore}점
+                    </span>
+                  )}
                 </div>
                 <p className="text-gray-700 leading-relaxed">{parsedDetail.summary}</p>
               </div>

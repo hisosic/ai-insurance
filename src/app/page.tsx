@@ -86,6 +86,10 @@ export default function Home() {
       setError("이름, 나이, 성별은 필수 항목입니다.");
       return;
     }
+    if (phone && !/^010/.test(phone.replace(/[-\s]/g, ""))) {
+      setError("연락처는 010으로 시작하는 번호만 입력 가능합니다.");
+      return;
+    }
     if (inputMode === "file" && !file) {
       setError("건강검진 결과지 파일을 업로드해주세요.");
       return;
@@ -593,6 +597,7 @@ export default function Home() {
                         <p>2. 건강 상태에 대한 정확한 판단은 반드시 의료기관의 전문의 상담을 통해 확인하시기 바랍니다.</p>
                         <p>3. 보험상품 추천은 AI가 검진 결과를 바탕으로 생성한 <span className="font-medium text-gray-700">참고 정보</span>이며, 「보험업법」상 보험 모집 또는 보험 계약 체결의 권유에 해당하지 않습니다.</p>
                         <p>4. 실제 보험 가입 시 보장 내용, 보험료, 가입 조건 등은 해당 보험사와의 상담을 통해 반드시 확인하시기 바랍니다.</p>
+                        <p>5. 분석 결과에 따라 <span className="font-medium text-gray-700">전문 상담사가 연락</span>을 드릴 수 있으며, 보다 정확한 안내를 위한 상담이 진행될 수 있습니다.</p>
                       </div>
                     </div>
                   </div>

@@ -11,6 +11,9 @@ import {
   computeOverallRiskLevel,
   computeHealthScore,
   buildFindings,
+  sanitizeMetrics,
+  countValidMetrics,
+  MIN_REQUIRED_METRICS,
 } from "@/lib/health-scoring";
 
 // ─── Gemini API 키 폴백 ───
@@ -108,6 +111,21 @@ export async function POST(request: NextRequest) {
     const gender = formData.get("gender") as string;
     const phone = formData.get("phone") as string;
 
+    // ─── 입력값 검증 ───
+    if (!name || typeof name !== "string" || name.trim().length < 1 || name.trim().length > 40) {
+      return NextResponse.json({ error: "이름이 올바르지 않습니다" }, { status: 400 });
+    }
+    const ageNum = parseInt(age);
+    if (!age || isNaN(ageNum) || ageNum < 1 || ageNum > 150) {
+      return NextResponse.json({ error: "나이가 올바르지 않습니다" }, { status: 400 });
+    }
+    if (!gender || !["남성", "여성"].includes(gender)) {
+      return NextResponse.json({ error: "성별이 올바르지 않습니다" }, { status: 400 });
+    }
+    if (phone && !/^010\d{7,8}$/.test(phone.replace(/[-\s]/g, ""))) {
+      return NextResponse.json({ error: "연락처는 010으로 시작하는 번호만 허용됩니다" }, { status: 400 });
+    }
+
     if (!file && !textInput?.trim()) {
       return NextResponse.json(
         { error: "파일 또는 텍스트 입력이 필요합니다" },
@@ -117,20 +135,42 @@ export async function POST(request: NextRequest) {
 
     let base64 = "";
     let mimeType = "";
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
     if (file) {
       const bytes = await file.arrayBuffer();
-      base64 = Buffer.from(bytes).toString("base64");
-      const isPdf = file.type === "application/pdf";
-      const isImage = file.type.startsWith("image/");
-      mimeType = file.type;
 
-      if (!isPdf && !isImage) {
+      // 서버 측 파일 크기 검증
+      if (bytes.byteLength > MAX_FILE_SIZE) {
         return NextResponse.json(
-          { error: "PDF 또는 이미지 파일만 지원합니다" },
+          { error: "파일 크기는 20MB 이하만 허용됩니다" },
+          { status: 413 }
+        );
+      }
+
+      // 매직 바이트로 실제 파일 타입 검증 (MIME spoofing / 웹쉘 방지)
+      const header = new Uint8Array(bytes.slice(0, 8));
+      const isRealPdf = header[0] === 0x25 && header[1] === 0x50 && header[2] === 0x44 && header[3] === 0x46; // %PDF
+      const isRealPng = header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4E && header[3] === 0x47; // .PNG
+      const isRealJpeg = header[0] === 0xFF && header[1] === 0xD8 && header[2] === 0xFF; // JPEG SOI
+      const isRealGif = header[0] === 0x47 && header[1] === 0x49 && header[2] === 0x46; // GIF
+      const isRealWebp = header[0] === 0x52 && header[1] === 0x49 && header[2] === 0x46 && header[3] === 0x46; // RIFF (WebP)
+      const isRealBmp = header[0] === 0x42 && header[1] === 0x4D; // BM
+
+      if (!isRealPdf && !isRealPng && !isRealJpeg && !isRealGif && !isRealWebp && !isRealBmp) {
+        return NextResponse.json(
+          { error: "허용되지 않는 파일 형식입니다. PDF 또는 이미지 파일만 지원합니다." },
           { status: 400 }
         );
       }
+
+      base64 = Buffer.from(bytes).toString("base64");
+      mimeType = isRealPdf ? "application/pdf"
+        : isRealPng ? "image/png"
+        : isRealJpeg ? "image/jpeg"
+        : isRealGif ? "image/gif"
+        : isRealWebp ? "image/webp"
+        : "image/bmp";
     }
 
     // ─── Gemini API 키 폴백으로 모델 생성 ───
@@ -155,8 +195,9 @@ export async function POST(request: NextRequest) {
     throw lastError || new Error("모든 API 키가 실패했습니다");
   } catch (error) {
     console.error("Analysis error:", error);
-    const message =
-      error instanceof Error ? error.message : "분석 중 오류가 발생했습니다";
+    const message = process.env.NODE_ENV === "production"
+      ? "분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+      : error instanceof Error ? error.message : "분석 중 오류가 발생했습니다";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -201,7 +242,20 @@ async function runAnalysis(
         .replace(/^```(?:json)?\n?/, "")
         .replace(/\n?```$/, "");
     }
-    const metrics: ExtractedMetrics = JSON.parse(extractedText);
+    const rawMetrics: ExtractedMetrics = JSON.parse(extractedText);
+
+    // 비정상적 값 필터링 및 유효 수치 개수 검증
+    const metrics = sanitizeMetrics(rawMetrics);
+    const validCount = countValidMetrics(metrics);
+
+    if (validCount < MIN_REQUIRED_METRICS) {
+      return NextResponse.json(
+        {
+          error: `건강검진 수치를 충분히 추출하지 못했습니다 (추출된 수치: ${validCount}개). 검진 결과지를 더 선명한 이미지로 다시 업로드하거나, 텍스트로 직접 입력해주세요.`,
+        },
+        { status: 422 }
+      );
+    }
 
     // ═══════════════════════════════════════════
     // STEP 2: 코드 기반 결정적 점수 산정

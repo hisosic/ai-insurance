@@ -135,7 +135,7 @@ export function gradeAllMetrics(
 }
 
 export function computeRiskScore(grades: GradeResult[]): number {
-  if (grades.length === 0) return 2;
+  if (grades.length === 0) return -1; // 수치 없음 → 판정 불가
 
   const abnormalCount = grades.filter((g) => g.grade === "abnormal").length;
   const borderlineCount = grades.filter((g) => g.grade === "borderline").length;
@@ -154,6 +154,7 @@ export function computeRiskScore(grades: GradeResult[]): number {
 }
 
 export function computeStatus(score: number): string {
+  if (score < 0) return "판정불가";
   if (score <= 2) return "정상";
   if (score <= 4) return "경계";
   if (score <= 6) return "주의";
@@ -161,9 +162,12 @@ export function computeStatus(score: number): string {
 }
 
 export function computeOverallRiskLevel(scores: number[]): string {
-  if (scores.length === 0) return "low";
-  const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-  const max = Math.max(...scores);
+  // 판정 가능한 카테고리만 필터
+  const validScores = scores.filter((s) => s >= 0);
+  if (validScores.length === 0) return "unknown";
+
+  const avg = validScores.reduce((a, b) => a + b, 0) / validScores.length;
+  const max = Math.max(...validScores);
 
   // 보수적: 하나라도 높으면 전체 등급 상향
   if (max >= 9) return "critical";
@@ -178,10 +182,12 @@ export function computeOverallRiskLevel(scores: number[]): string {
  * riskScore가 낮을수록 건강 점수가 높음
  */
 export function computeHealthScore(categoryScores: number[]): number {
-  if (categoryScores.length === 0) return 95;
+  // 판정 가능한 카테고리만 필터
+  const validScores = categoryScores.filter((s) => s >= 0);
+  if (validScores.length === 0) return -1; // 수치 부족 → 판정 불가
 
   // 각 카테고리별 점수: (10 - riskScore) / 10 * 100 → 카테고리당 0~100점
-  const categoryHealthScores = categoryScores.map((rs) =>
+  const categoryHealthScores = validScores.map((rs) =>
     Math.max(0, Math.round(((10 - rs) / 8) * 100))
   );
 
@@ -195,6 +201,49 @@ export function computeHealthScore(categoryScores: number[]): number {
   // 0~100 범위로 클램프
   return Math.max(0, Math.min(100, Math.round(raw)));
 }
+
+// 추출된 수치의 유효성 검증 (비정상적 범위 필터링)
+const METRIC_BOUNDS: Record<string, [number, number]> = {
+  systolic: [50, 300],
+  diastolic: [20, 200],
+  fastingGlucose: [20, 700],
+  hba1c: [2, 20],
+  totalCholesterol: [50, 500],
+  ldl: [10, 400],
+  hdl: [5, 150],
+  triglyceride: [10, 2000],
+  ast: [1, 2000],
+  alt: [1, 2000],
+  ggt: [1, 3000],
+  creatinine: [0.1, 30],
+  egfr: [1, 200],
+  bun: [1, 150],
+  bmi: [10, 60],
+  hemoglobin: [2, 25],
+  wbc: [0.5, 50],
+  platelet: [10, 1000],
+  uricAcid: [0.5, 20],
+};
+
+export function sanitizeMetrics(m: ExtractedMetrics): ExtractedMetrics {
+  const sanitized: ExtractedMetrics = {};
+  for (const [key, value] of Object.entries(m)) {
+    if (value === null || value === undefined) continue;
+    if (typeof value !== "number" || isNaN(value)) continue;
+    const bounds = METRIC_BOUNDS[key];
+    if (bounds && (value < bounds[0] || value > bounds[1])) continue; // 범위 밖 → 제외
+    (sanitized as Record<string, number>)[key] = value;
+  }
+  return sanitized;
+}
+
+export function countValidMetrics(m: ExtractedMetrics): number {
+  return Object.values(m).filter(
+    (v) => v !== null && v !== undefined && typeof v === "number" && !isNaN(v)
+  ).length;
+}
+
+export const MIN_REQUIRED_METRICS = 3;
 
 export function buildFindings(grades: GradeResult[]): string[] {
   return grades.map((g) => {

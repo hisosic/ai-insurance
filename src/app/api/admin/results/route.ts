@@ -1,25 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAnalysisList, deleteAnalysis, updateMemo } from "@/lib/db";
+import { getAnalysisList, deleteAnalysis, updateMemo, verifySession } from "@/lib/db";
 
 const UNAUTHORIZED = NextResponse.json({ error: "인증이 필요합니다" }, { status: 401 });
 
+function isAuthenticated(request: NextRequest): boolean {
+  const token = request.cookies.get("admin_session")?.value;
+  return !!token && verifySession(token);
+}
+
 export async function GET(request: NextRequest) {
-  if (request.cookies.get("admin_auth")?.value !== "true") return UNAUTHORIZED;
+  if (!isAuthenticated(request)) return UNAUTHORIZED;
   const { searchParams } = new URL(request.url);
-  const page = parseInt(searchParams.get("page") || "1");
-  const limit = parseInt(searchParams.get("limit") || "20");
-  const search = searchParams.get("search") || undefined;
+  const page = Math.max(parseInt(searchParams.get("page") || "1") || 1, 1);
+  const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "20") || 20, 1), 100);
+  const search = searchParams.get("search")?.slice(0, 200) || undefined;
 
   const data = getAnalysisList(page, limit, search);
   return NextResponse.json(data);
 }
 
 export async function DELETE(request: NextRequest) {
-  if (request.cookies.get("admin_auth")?.value !== "true") return UNAUTHORIZED;
+  if (!isAuthenticated(request)) return UNAUTHORIZED;
   const { searchParams } = new URL(request.url);
   const id = parseInt(searchParams.get("id") || "0");
 
-  if (!id) {
+  if (!id || isNaN(id)) {
     return NextResponse.json({ error: "ID가 필요합니다" }, { status: 400 });
   }
 
@@ -33,14 +38,15 @@ export async function DELETE(request: NextRequest) {
 
 // 메모 저장
 export async function PATCH(request: NextRequest) {
-  if (request.cookies.get("admin_auth")?.value !== "true") return UNAUTHORIZED;
+  if (!isAuthenticated(request)) return UNAUTHORIZED;
 
   const { id, memo } = await request.json();
   if (!id) {
     return NextResponse.json({ error: "ID가 필요합니다" }, { status: 400 });
   }
 
-  const success = updateMemo(id, memo || "");
+  const sanitizedMemo = typeof memo === "string" ? memo.slice(0, 2000) : "";
+  const success = updateMemo(id, sanitizedMemo);
   if (!success) {
     return NextResponse.json({ error: "결과를 찾을 수 없습니다" }, { status: 404 });
   }

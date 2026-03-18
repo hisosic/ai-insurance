@@ -33,26 +33,34 @@ export function MedicalNoticeBanner() {
 
 export function HealthScoreGauge({ result }: { result: AnalysisResult }) {
   const score = result.healthScore ?? 0;
+  const isUnavailable = score < 0;
   const scoreStyle = getHealthScoreStyle(score);
   const riskStyle = getOverallRiskStyle(result.overallRiskLevel);
 
-  const bgColor = score >= 80 ? "bg-green-500" : score >= 60 ? "bg-yellow-500" : score >= 40 ? "bg-orange-500" : "bg-red-500";
-  const ringColor = score >= 80 ? "ring-green-200" : score >= 60 ? "ring-yellow-200" : score >= 40 ? "ring-orange-200" : "ring-red-200";
+  const bgColor = isUnavailable ? "bg-gray-400" : score >= 80 ? "bg-green-500" : score >= 60 ? "bg-yellow-500" : score >= 40 ? "bg-orange-500" : "bg-red-500";
+  const ringColor = isUnavailable ? "ring-gray-200" : score >= 80 ? "ring-green-200" : score >= 60 ? "ring-yellow-200" : score >= 40 ? "ring-orange-200" : "ring-red-200";
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col items-center justify-center">
       <div className={`w-28 h-28 ${bgColor} rounded-full ring-4 ${ringColor} flex items-center justify-center shadow-lg`}>
-        <span className="text-4xl font-black text-white">{score}</span>
+        {isUnavailable ? (
+          <span className="text-lg font-bold text-white text-center leading-tight">판정<br/>불가</span>
+        ) : (
+          <span className="text-4xl font-black text-white">{score}</span>
+        )}
       </div>
       <div className="flex items-center justify-center gap-2 mt-3">
         <span className={`px-3 py-1 rounded-full text-sm font-bold ${scoreStyle.color}`}
-          style={{ backgroundColor: score >= 80 ? "#f0fdf4" : score >= 60 ? "#fefce8" : score >= 40 ? "#fff7ed" : "#fef2f2" }}>
+          style={{ backgroundColor: isUnavailable ? "#f3f4f6" : score >= 80 ? "#f0fdf4" : score >= 60 ? "#fefce8" : score >= 40 ? "#fff7ed" : "#fef2f2" }}>
           {scoreStyle.label}
         </span>
         <span className={`px-3 py-1 rounded-full border text-xs font-medium ${riskStyle.bg} ${riskStyle.text} ${riskStyle.border}`}>
           위험도: {riskStyle.label}
         </span>
       </div>
+      {isUnavailable && (
+        <p className="text-xs text-gray-500 mt-2 text-center">추출된 수치가 부족하여 점수를 산정할 수 없습니다</p>
+      )}
     </div>
   );
 }
@@ -78,12 +86,12 @@ export function CategoryAnalysis({ result }: { result: AnalysisResult }) {
           <div key={i} className={`rounded-xl border p-4 ${getRiskColor(cat.riskScore)}`}>
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold text-gray-900">{cat.name}</h4>
-              <span className="text-sm font-bold">{cat.riskScore}/10</span>
+              <span className="text-sm font-bold">{cat.riskScore < 0 ? "수치없음" : `${cat.riskScore}/10`}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
               <div
                 className={`h-2 rounded-full transition-all ${getRiskBarColor(cat.riskScore)}`}
-                style={{ width: `${cat.riskScore * 10}%` }}
+                style={{ width: `${cat.riskScore < 0 ? 0 : cat.riskScore * 10}%` }}
               />
             </div>
             <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-white/70 mb-2">

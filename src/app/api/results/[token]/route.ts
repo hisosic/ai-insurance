@@ -6,6 +6,12 @@ export async function GET(
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
+
+  // 토큰 형식 검증 (base64url, 32bytes = 약 43자)
+  if (!token || !/^[A-Za-z0-9_-]{10,}$/.test(token)) {
+    return NextResponse.json({ error: "유효하지 않은 토큰입니다" }, { status: 400 });
+  }
+
   const record = getAnalysisByToken(token);
 
   if (!record) {
