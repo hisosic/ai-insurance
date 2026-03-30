@@ -115,7 +115,7 @@ export function TopRisks({ result }: { result: AnalysisResult }) {
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
       <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
         <AlertTriangle className="w-5 h-5 text-orange-500" />
-        주요 질병 위험 분석
+        앞으로 주의할 건강 항목
       </h3>
       <div className="space-y-4">
         {result.topRisks.map((risk, i) => (
@@ -183,16 +183,16 @@ export function Recommendations({ result }: { result: AnalysisResult }) {
 
 export function InsuranceRecommendations({ result }: { result: AnalysisResult }) {
   return (
-    <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl shadow-sm border border-orange-200 p-6">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
       <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
         <Shield className="w-5 h-5 text-orange-500" />
-        맞춤 보험상품 추천
+        참고용 보험 정보
       </h3>
       <p className="text-sm text-gray-600 mb-2">
-        건강검진 분석 결과를 바탕으로 참고할 수 있는 보험상품 정보를 안내드립니다.
+        분석 결과를 바탕으로 참고할 수 있는 보험상품 정보입니다. 가입 여부는 전적으로 본인의 선택입니다.
       </p>
-      <p className="text-xs text-orange-600/70 mb-6">
-        ※ 본 안내는 보험 모집 또는 계약 권유가 아닌 참고용 정보이며, 실제 가입 조건은 보험사에 문의하시기 바랍니다.
+      <p className="text-xs text-gray-500 mb-6">
+        ※ 본 안내는 보험 모집·계약 권유가 아닌 참고용 정보이며, 실제 가입 조건은 보험사에 문의하시기 바랍니다.
       </p>
       <div className="space-y-4">
         {result.insuranceRecommendations
@@ -255,8 +255,8 @@ export function KakaoConsultButton() {
         <MessageCircle className="w-6 h-6 text-[#FEE500]" />
       </div>
       <div>
-        <p className="font-bold text-[#3C1E1E] text-sm">보험설계사 상담</p>
-        <p className="text-xs text-[#3C1E1E]/70 mt-0.5">카카오톡으로 전문 상담사와 1:1 상담</p>
+        <p className="font-bold text-[#3C1E1E] text-sm">건강 상담사 연결</p>
+        <p className="text-xs text-[#3C1E1E]/70 mt-0.5">카카오톡 1:1 상담 (선택사항)</p>
       </div>
       <ExternalLink className="w-4 h-4 text-[#3C1E1E]/50 ml-auto group-hover:translate-x-0.5 transition-transform" />
     </a>
@@ -268,23 +268,10 @@ export function LegalDisclaimer() {
     <div className="bg-gray-50 rounded-xl border border-gray-200 p-5 text-xs text-gray-500 leading-relaxed space-y-3">
       <p className="font-semibold text-gray-700 text-sm">면책 및 법적 고지</p>
       <div>
-        <p className="font-medium text-gray-600 mb-0.5">[의료 관련 면책]</p>
+        <p className="font-medium text-gray-600 mb-0.5">[책임 제한]</p>
         <p>
-          본 분석 결과는 인공지능(AI)이 생성한 <span className="font-medium text-gray-700">참고용 건강 정보</span>이며,
-          「의료법」 제2조에 따른 의료행위(진단, 검안, 처방, 투약, 치료 등)에 해당하지 않습니다.
-          AI 분석 결과만으로 건강 상태를 판단하거나 치료 방침을 결정하지 마시고,
-          반드시 의료기관의 전문의 상담을 통해 정확한 진단 및 치료를 받으시기 바랍니다.
-          본 서비스 제공자는 AI 분석 결과에 의존하여 발생한 건강상의 문제에 대해 법적 책임을 부담하지 않습니다.
-        </p>
-      </div>
-      <div>
-        <p className="font-medium text-gray-600 mb-0.5">[보험 관련 면책]</p>
-        <p>
-          본 서비스에서 제공하는 보험상품 정보는 AI가 건강검진 결과를 바탕으로 생성한 <span className="font-medium text-gray-700">참고용 정보</span>이며,
-          「보험업법」 제83조에 따른 보험 모집, 보험계약 체결의 권유 또는 중개 행위에 해당하지 않습니다.
-          표시된 보험료 및 보장 내용은 실제와 다를 수 있으며, 정확한 보험료, 보장 범위, 가입 조건, 보험금 지급 사유 등은
-          반드시 해당 보험사에 직접 문의하여 확인하시기 바랍니다.
-          본 서비스 제공자는 보험상품 추천 정보에 의존하여 발생한 재산상의 손해에 대해 법적 책임을 부담하지 않습니다.
+          본 서비스 제공자는 AI 분석 결과에 의존하여 발생한 건강상의 문제 또는 보험상품 추천 정보에 의존하여 발생한 재산상의 손해에 대해 법적 책임을 부담하지 않습니다.
+          표시된 보험료 및 보장 내용은 실제와 다를 수 있으며, 정확한 보험료, 보장 범위, 가입 조건 등은 반드시 해당 보험사에 직접 확인하시기 바랍니다.
         </p>
       </div>
       <div>
@@ -304,11 +291,10 @@ export function Footer() {
   return (
     <footer className="mt-16 border-t border-gray-200 bg-white/60">
       <div className="max-w-6xl mx-auto px-4 py-6 text-center text-xs text-gray-400 space-y-1">
-        <p className="text-sm text-gray-500">본 서비스는 AI 기반 건강검진 참고 분석 서비스입니다.</p>
-        <p>본 서비스는 의료기관이 아니며, 제공되는 정보는 의학적 진단·치료를 대체하지 않습니다.</p>
-        <p>보험상품 안내는 참고 정보이며, 「보험업법」상 보험 모집 행위에 해당하지 않습니다.</p>
-        <p className="font-medium text-gray-500 pt-2">본 서비스는 특정 보험사의 공식 서비스가 아니며, 어떠한 보험사와도 제휴·협약 관계에 있지 않습니다.</p>
-        <p>언급된 보험상품 정보는 공개된 자료를 바탕으로 한 참고용이며, 실제 상품과 다를 수 있습니다.</p>
+        <p className="text-sm text-gray-500">AI 기반 건강검진 참고 분석 서비스</p>
+        <p>본 서비스는 의료기관이 아니며,<br />제공되는 정보는 의학적 진단·치료를 대체하지 않습니다.</p>
+        <p>보험 관련 정보는 참고용이며,<br />보험 모집·계약 권유에 해당하지 않습니다.<br />특정 보험사와 제휴·협약 관계가 없습니다.</p>
+        <p className="pt-2">AI가 생성한 참고용 분석이며,<br />정확한 진단은 의료기관 전문의 상담이 필요합니다.</p>
       </div>
     </footer>
   );

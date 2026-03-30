@@ -16,11 +16,19 @@ import {
   MIN_REQUIRED_METRICS,
 } from "@/lib/health-scoring";
 
-// ─── Gemini API 키 폴백 ───
+// ─── Gemini API 키 라운드로빈 + 폴백 ───
 const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY || "",
   process.env.GEMINI_API_KEY_BACKUP || "",
 ].filter(Boolean);
+
+let requestCounter = 0;
+
+function getNextKeyIndex(): number {
+  const idx = requestCounter % GEMINI_API_KEYS.length;
+  requestCounter++;
+  return idx;
+}
 
 function createGenAI(keyIndex = 0): GoogleGenerativeAI {
   return new GoogleGenerativeAI(GEMINI_API_KEYS[keyIndex] || "");
@@ -173,12 +181,15 @@ export async function POST(request: NextRequest) {
         : "image/bmp";
     }
 
-    // ─── Gemini API 키 폴백으로 모델 생성 ───
+    // ─── Gemini API 키 라운드로빈 + 폴백 ───
+    const startIdx = getNextKeyIndex();
     let lastError: Error | null = null;
-    for (let keyIdx = 0; keyIdx < GEMINI_API_KEYS.length; keyIdx++) {
+    for (let i = 0; i < GEMINI_API_KEYS.length; i++) {
+      const keyIdx = (startIdx + i) % GEMINI_API_KEYS.length;
       try {
         const genAI = createGenAI(keyIdx);
         const { extractionModel, analysisModel } = getModels(genAI);
+        console.log(`Using Gemini API key #${keyIdx + 1}`);
         const result = await runAnalysis(
           extractionModel, analysisModel,
           { file, base64, mimeType, textInput, name, age, gender, phone }
@@ -187,9 +198,6 @@ export async function POST(request: NextRequest) {
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
         console.warn(`Gemini API key #${keyIdx + 1} failed:`, lastError.message);
-        if (keyIdx < GEMINI_API_KEYS.length - 1) {
-          console.log(`Retrying with backup key #${keyIdx + 2}...`);
-        }
       }
     }
     throw lastError || new Error("모든 API 키가 실패했습니다");
@@ -325,7 +333,7 @@ ${productSummary}
       "condition": "질병명",
       "probability": "높음 또는 중간 또는 낮음",
       "explanation": "riskScore가 높은 카테고리의 이상 수치에 근거한 설명",
-      "preventionTips": ["구체적 예방 수칙1", "예방 수칙2"]
+      "preventionTips": ["구체적이고 실천 가능한 예방 수칙 (수치 목표, 빈도, 기간, 식단/운동 종류 등 포함). 4~6개 작성"]
     }
   ],
   "recommendations": {
@@ -347,7 +355,8 @@ ${productSummary}
 2. probability는 다음 기준: 해당 카테고리 riskScore 7이상="높음", 5~6="중간", 3~4="낮음"
 3. insuranceRecommendations는 riskScore가 높은 카테고리에 대응하는 상품 2~4개. productId는 반드시 위 목록의 ID 사용.
 4. urgentActions는 riskScore 8 이상인 카테고리가 없으면 빈 배열 [].
-5. summary에는 반드시 가장 높은 riskScore의 카테고리와 해당 이상 수치를 언급.`;
+5. summary에는 반드시 가장 높은 riskScore의 카테고리와 해당 이상 수치를 언급.
+6. preventionTips는 각 질병별 4~6개 작성. 각 항목은 반드시 다음을 포함: 구체적 수치 목표(예: "나트륨 하루 2,000mg 이하"), 실천 빈도(예: "주 5회 30분"), 권장 식품/운동 종류(예: "등푸른 생선, 현미밥, 걷기·수영"), 기대 효과(예: "3개월 내 LDL 10~15% 감소 기대"). 추상적인 표현("건강한 식단", "규칙적 운동") 대신 누구나 바로 실천할 수 있는 구체적 행동 지침으로 작성.`;
 
     const analysisResult = await analysisModel.generateContent(analysisPrompt);
     let analysisText = analysisResult.response.text().trim();
@@ -392,12 +401,15 @@ ${productSummary}
     const { id: recordId, shareToken } = saveAnalysis({ name, age, gender, phone }, analysis);
 
     // Telegram 알림 (비동기, 실패해도 응답에 영향 없음)
+    const baseUrl = process.env.BASE_URL || "http://168.107.62.188:3000";
     sendTelegramNotification({
       name, age, gender, phone,
       overallRiskLevel,
       healthScore,
       summary: analysis.summary,
       recordId,
+      shareToken,
+      baseUrl,
     });
 
     return NextResponse.json({

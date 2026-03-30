@@ -10,6 +10,8 @@ export async function sendTelegramNotification(data: {
   healthScore: number;
   summary: string;
   recordId: number;
+  shareToken: string;
+  baseUrl: string;
 }) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
 
@@ -41,7 +43,8 @@ export async function sendTelegramNotification(data: {
     `${emoji} <b>종합 위험도:</b> ${label}`,
     `📝 ${data.summary}`,
     ``,
-    `🔗 관리자 페이지에서 상세 확인 (ID: ${data.recordId})`,
+    `🔗 <b>결과 페이지:</b> ${data.baseUrl}/results/${data.shareToken}`,
+    `🛠 <b>관리자:</b> ${data.baseUrl}/admin`,
   ].join("\n");
 
   try {

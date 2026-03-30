@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import {
   Upload,
@@ -58,6 +58,7 @@ export default function Home() {
   const [recordId, setRecordId] = useState<number | null>(null);
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [showSample, setShowSample] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -235,7 +236,7 @@ export default function Home() {
 
   const handleReferFriend = () => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const text = `AI가 무료로 건강검진 결과를 분석해주고, 맞춤 보험까지 추천해줍니다!\n지금 바로 분석받아보세요: ${origin}`;
+    const text = `AI가 무료로 건강검진 결과를 분석해줍니다!\n지금 바로 분석받아보세요: ${origin}`;
     copyToClipboard(text);
   };
 
@@ -250,7 +251,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">건강검진 AI 분석</h1>
-              <p className="text-xs text-gray-500">AI 건강분석 및 보험 정보 서비스</p>
+              <p className="text-xs text-gray-500">AI 건강검진 분석 서비스</p>
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -266,24 +267,103 @@ export default function Home() {
           <div className="animate-fade-in">
             {/* Hero */}
             <div className="text-center mb-10">
-              <h2 className="text-3xl font-bold text-gray-900 mb-3">
-                AI가 분석하는 나의 건강 리포트
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3 leading-snug">
+                건강검진 결과,<br className="md:hidden" />{" "}
+                제대로 이해하고 계신가요?
               </h2>
-              <p className="text-gray-600 max-w-2xl mx-auto">
-                건강검진 결과지를 업로드하면 AI 전문가가 정밀 분석하여
+              <p className="text-sm md:text-base text-gray-600 max-w-2xl mx-auto leading-relaxed">
+                복잡한 검진 수치를 AI가 쉽게 풀어드립니다.
                 <br />
-                취약 부위와 맞춤 보험상품을 추천해드립니다.
+                숨은 건강 위험을 미리 발견하고, 맞춤 건강관리를 시작하세요.
               </p>
+              <div className="flex items-center justify-center gap-3 mt-5">
+                <div className="flex items-center gap-3 md:gap-4 text-xs text-gray-500">
+                  <span className="flex items-center gap-1"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />무료 분석</span>
+                  <span className="flex items-center gap-1"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />1분 소요</span>
+                  <span className="flex items-center gap-1"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />원본 미저장</span>
+                </div>
+              </div>
               <button
                 onClick={() => setShowSample(true)}
-                className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-orange-200 text-orange-600 font-medium rounded-xl hover:bg-orange-50 hover:border-orange-300 transition-all text-sm shadow-sm"
+                className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-600 font-medium rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all text-sm shadow-sm"
               >
                 <Eye className="w-4 h-4" />
-                분석 결과 샘플 보기
+                실제 분석 결과 예시 보기
               </button>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {/* Before / After Visual Comparison */}
+            <div className="max-w-4xl mx-auto mb-10">
+              <p className="text-center text-xs md:text-sm text-gray-500 mb-4">복잡한 숫자 나열에서 한눈에 보이는 건강 리포트로</p>
+              <div className="grid md:grid-cols-[1fr_auto_1fr] gap-0 items-stretch">
+                {/* Before: Raw Numbers */}
+                <div className="bg-gray-100 rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none p-4 md:p-5 border border-gray-200 border-b-0 md:border-b md:border-r-0 relative overflow-hidden">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 md:mb-3">Before</p>
+                  <div className="font-mono text-[11px] text-gray-500 leading-relaxed space-y-0.5 opacity-70">
+                    <p>혈압: 130/85 mmHg</p>
+                    <p>공복혈당: 112 mg/dL</p>
+                    <p>총콜레스테롤: 220 mg/dL</p>
+                    <p>HDL: 42 mg/dL</p>
+                    <p>LDL: 150 mg/dL</p>
+                    <p>중성지방: 195 mg/dL</p>
+                    <p>AST(GOT): 35 U/L</p>
+                    <p>ALT(GPT): 52 U/L</p>
+                    <p>GGT: 78 U/L</p>
+                    <p>HbA1c: 6.0%</p>
+                    <p>BMI: 26.8</p>
+                    <p className="text-gray-400">크레아티닌: 0.9 mg/dL</p>
+                  </div>
+                  <div className="absolute bottom-3 right-3 text-xs text-gray-400 italic">이게 뭐지...?</div>
+                </div>
+
+                {/* Arrow */}
+                <div className="flex items-center justify-center py-1.5 md:py-0 md:px-3 bg-gray-50 md:bg-transparent border-x border-gray-200 md:border-0">
+                  <div className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 bg-orange-500 rounded-full shadow-lg shadow-orange-200">
+                    <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-white rotate-90 md:rotate-0" />
+                  </div>
+                </div>
+
+                {/* After: AI Analysis */}
+                <div className="bg-white rounded-b-2xl md:rounded-r-2xl md:rounded-bl-none p-4 md:p-5 border border-gray-200 border-t-0 md:border-t md:border-l-0 shadow-sm">
+                  <p className="text-xs font-semibold text-orange-500 uppercase tracking-wider mb-2 md:mb-3">After — AI 분석</p>
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-gray-900">건강점수</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-black text-white">62</span>
+                        </div>
+                        <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-medium">건강함</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      {[
+                        { name: "심혈관계", score: 5, color: "bg-yellow-400" },
+                        { name: "간 기능", score: 6, color: "bg-orange-400" },
+                        { name: "당뇨/대사", score: 5, color: "bg-yellow-400" },
+                        { name: "신장 기능", score: 2, color: "bg-green-400" },
+                      ].map((cat) => (
+                        <div key={cat.name} className="flex items-center gap-2 text-xs">
+                          <span className="w-16 text-gray-600 truncate">{cat.name}</span>
+                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${cat.color}`} style={{ width: `${cat.score * 10}%` }} />
+                          </div>
+                          <span className="text-gray-500 w-8 text-right">{cat.score}/10</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="pt-1 border-t border-gray-100">
+                      <p className="text-[11px] text-green-700 flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" />
+                        맞춤 관리법 + 주의 질환 안내 포함
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div ref={formRef} className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
               {/* File Upload / Text Input */}
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -437,7 +517,7 @@ export default function Home() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      연락처
+                      연락처 <span className="text-xs text-gray-400 font-normal">(선택)</span>
                     </label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -454,30 +534,45 @@ export default function Home() {
                         className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
                       />
                     </div>
+                    <p className="text-xs text-gray-400 mt-1">상담을 원하시면 입력해주세요. 미입력 시 분석 결과만 제공됩니다.</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Privacy Masking Notice */}
-            <div className="max-w-4xl mx-auto mt-6 bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 flex items-start gap-3">
-              <EyeOff className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-blue-800 leading-relaxed">
-                <p className="font-semibold mb-1">민감정보 보호 안내</p>
-                <p className="text-xs text-blue-700">
-                  업로드된 건강검진 결과지에 포함된 <span className="font-medium">주민등록번호, 주소, 수진자 고유 식별정보</span> 등
-                  분석에 불필요한 민감 항목은 AI가 자동으로 인식하여 <span className="font-medium">마스킹(숨김) 처리 후 전송</span>됩니다.
-                  수치 데이터와 검사 결과만 분석에 활용되며, 원본 파일은 서버에 저장되지 않습니다.
-                </p>
+            {/* Security & Privacy Trust Section */}
+            <div className="max-w-4xl mx-auto mt-6 bg-gradient-to-r from-blue-50 to-emerald-50 border border-blue-200 rounded-xl px-4 md:px-5 py-3 md:py-4">
+              <div className="flex items-start gap-2.5 mb-2.5 md:mb-3">
+                <EyeOff className="w-4 h-4 md:w-5 md:h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <p className="font-semibold text-xs md:text-sm text-blue-900">당신의 건강정보는 안전하게 보호됩니다</p>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-[11px] md:text-xs text-gray-700">
+                <div className="flex items-start gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span>주민번호·주소 자동 삭제</span>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span>원본 파일 서버 미저장</span>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span>1년 보관 후 자동 파기</span>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span>보험사·광고사 제공 없음</span>
+                </div>
               </div>
             </div>
 
             {/* Consent Section */}
-            <div className="max-w-4xl mx-auto mt-8 bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-orange-500" />
-                약관 동의
+            <div className="max-w-4xl mx-auto mt-6 md:mt-8 bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6">
+              <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                이용 동의
               </h3>
+              <p className="text-[11px] md:text-xs text-gray-500 mb-3 md:mb-4 ml-7">안심하고 이용하실 수 있도록 꼭 필요한 동의만 받고 있습니다.</p>
 
               <div className="space-y-3">
                 {/* 개인정보 수집·이용 동의 */}
@@ -593,11 +688,10 @@ export default function Home() {
                         [필수] 서비스 이용 안내 확인
                       </label>
                       <div className="mt-1.5 text-xs text-gray-500 leading-relaxed space-y-1">
-                        <p>1. 본 서비스의 분석 결과는 AI가 생성한 <span className="font-medium text-gray-700">참고용 정보</span>이며, 「의료법」상 의료행위(진단·치료)에 해당하지 않습니다.</p>
-                        <p>2. 건강 상태에 대한 정확한 판단은 반드시 의료기관의 전문의 상담을 통해 확인하시기 바랍니다.</p>
-                        <p>3. 보험상품 추천은 AI가 검진 결과를 바탕으로 생성한 <span className="font-medium text-gray-700">참고 정보</span>이며, 「보험업법」상 보험 모집 또는 보험 계약 체결의 권유에 해당하지 않습니다.</p>
-                        <p>4. 실제 보험 가입 시 보장 내용, 보험료, 가입 조건 등은 해당 보험사와의 상담을 통해 반드시 확인하시기 바랍니다.</p>
-                        <p>5. 분석 결과에 따라 <span className="font-medium text-gray-700">전문 상담사가 연락</span>을 드릴 수 있으며, 보다 정확한 안내를 위한 상담이 진행될 수 있습니다.</p>
+                        <p>1. 분석 결과는 AI가 생성한 <span className="font-medium text-gray-700">건강 참고 정보</span>이며, 의료 진단을 대체하지 않습니다.</p>
+                        <p>2. 정확한 건강 판단은 의료기관 전문의 상담을 권장합니다.</p>
+                        <p>3. 보험 관련 정보는 <span className="font-medium text-gray-700">참고용</span>이며, 보험 모집·계약 권유가 아닙니다.</p>
+                        <p>4. 연락처를 입력하신 경우, 건강 상담사가 연락을 드릴 수 있습니다.</p>
                       </div>
                     </div>
                   </div>
@@ -632,11 +726,11 @@ export default function Home() {
             )}
 
             {/* Submit */}
-            <div className="max-w-4xl mx-auto mt-8 text-center">
+            <div className="max-w-4xl mx-auto mt-6 md:mt-8 text-center">
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-200 hover:from-orange-600 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                className="inline-flex items-center gap-2 px-6 md:px-8 py-3.5 md:py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-200 hover:from-orange-600 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base md:text-lg"
               >
                 {loading ? (
                   <>
@@ -659,18 +753,25 @@ export default function Home() {
             </div>
 
             {/* Trust Indicators */}
-            <div className="max-w-4xl mx-auto mt-12 grid grid-cols-3 gap-4 text-center">
-              {[
-                { icon: Shield, title: "개인정보 보호", desc: "동의 기반 수집, 1년 후 파기" },
-                { icon: Activity, title: "AI 참고용 분석", desc: "의료 진단을 대체하지 않음" },
-                { icon: Heart, title: "보험 정보 제공", desc: "참고용 상품 안내 (모집행위 아님)" },
-              ].map((item, i) => (
-                <div key={i} className="p-4 rounded-xl bg-white/60 border border-gray-100">
-                  <item.icon className="w-8 h-8 text-orange-500 mx-auto mb-2" />
-                  <p className="font-medium text-gray-900 text-sm">{item.title}</p>
-                  <p className="text-xs text-gray-500 mt-1">{item.desc}</p>
-                </div>
-              ))}
+            <div className="max-w-4xl mx-auto mt-12">
+              <div className="grid grid-cols-3 gap-2 md:gap-4 text-center">
+                {[
+                  { icon: Shield, title: "개인정보 보호", desc: "동의 기반 수집\n1년 후 파기" },
+                  { icon: Activity, title: "AI 참고 분석", desc: "검진 수치 기반\n건강 리포트" },
+                  { icon: Heart, title: "예방 중심 안내", desc: "관리 가능한\n위험요인 알림" },
+                ].map((item, i) => (
+                  <div key={i} className="p-3 md:p-4 rounded-xl bg-white/60 border border-gray-100">
+                    <item.icon className="w-6 h-6 md:w-8 md:h-8 text-orange-500 mx-auto mb-1.5 md:mb-2" />
+                    <p className="font-medium text-gray-900 text-xs md:text-sm">{item.title}</p>
+                    <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 whitespace-pre-line">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 카카오톡 상담 버튼 */}
+            <div className="max-w-4xl mx-auto mt-8">
+              <KakaoConsultButton />
             </div>
           </div>
         ) : (
@@ -697,11 +798,9 @@ export default function Home() {
             <CategoryAnalysis result={result} />
             <TopRisks result={result} />
             <Recommendations result={result} />
-            <InsuranceRecommendations result={result} />
 
-            {/* CTA: 상담 / 공유 / 추천 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <KakaoConsultButton />
+            {/* CTA: 공유 / 추천 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
               {/* 결과 공유 */}
               <div className="relative">
@@ -785,6 +884,24 @@ export default function Home() {
                 </div>
               </button>
             </div>
+
+            {/* Insurance Section - Optional, separated */}
+            <details className="group">
+              <summary className="flex items-center justify-between bg-white rounded-2xl shadow-sm border border-gray-200 p-5 cursor-pointer hover:bg-gray-50 transition-all list-none">
+                <div className="flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-orange-400" />
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">추가 재무 보호 옵션 보기</p>
+                    <p className="text-xs text-gray-500 mt-0.5">분석 결과 기반 참고용 보험 정보 (선택사항)</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400 transition-transform group-open:rotate-90" />
+              </summary>
+              <div className="mt-4 space-y-4">
+                <InsuranceRecommendations result={result} />
+                <KakaoConsultButton />
+              </div>
+            </details>
 
             <LegalDisclaimer />
           </div>
